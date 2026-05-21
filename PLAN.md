@@ -11,6 +11,7 @@
 
 > 1.1 Setup repository completato.
 > 1.2 Backend scheletro FastAPI completato — health endpoint verificato, tabella `items` creata in SQLite.
+> 1.3 CRUD items completato — upload con validazione MIME/estensione/size, file salvati in `data/items/`, smoke test verde su tutti gli endpoint.
 
 ---
 
@@ -36,12 +37,12 @@ Obiettivo: avere uno slice verticale end-to-end con upload foto → salvataggio 
 - [x] Endpoint health check `GET /api/v1/health`
 
 ### 1.3 Backend — CRUD items
-- [ ] `POST /api/v1/items` — upload foto + metadata, salva file su disco in `data/items/`
-- [ ] `GET /api/v1/items` — lista paginata
-- [ ] `GET /api/v1/items/{id}` — dettaglio singolo
-- [ ] `DELETE /api/v1/items/{id}` — eliminazione (anche del file)
-- [ ] `GET /api/v1/items/{id}/image` — serve l'immagine
-- [ ] Validazione: formati immagine ammessi (jpg, png, webp), size max 10MB
+- [x] `POST /api/v1/items` — upload foto + metadata, salva file su disco in `data/items/`
+- [x] `GET /api/v1/items` — lista paginata
+- [x] `GET /api/v1/items/{id}` — dettaglio singolo
+- [x] `DELETE /api/v1/items/{id}` — eliminazione (anche del file)
+- [x] `GET /api/v1/items/{id}/image` — serve l'immagine
+- [x] Validazione: formati immagine ammessi (jpg, png, webp), size max 10MB
 
 ### 1.4 Backend — classificazione mock
 - [ ] `app/ml/classifier.py` con funzione `classify(image_path) -> dict`

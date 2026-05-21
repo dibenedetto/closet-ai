@@ -28,6 +28,15 @@ CORS_ORIGINS: list[str] = [
     "http://127.0.0.1:5173",
 ]
 
+# Vincoli upload immagini
+MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
+ALLOWED_IMAGE_CONTENT_TYPES: frozenset[str] = frozenset(
+    {"image/jpeg", "image/png", "image/webp"}
+)
+ALLOWED_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp"}
+)
+
 
 def ensure_dirs() -> None:
     """Crea le directory necessarie per lo storage locale."""

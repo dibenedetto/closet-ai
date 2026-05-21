@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClosetAI — pagina di test</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --panel-2: #232734;
+    --border: #2c3142;
+    --text: #e6e7ec;
+    --muted: #8a90a3;
+    --accent: #7c9cff;
+    --accent-2: #5b7df0;
+    --danger: #e85a6f;
+    --ok: #4ec9a0;
+    --warn: #e8c46c;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; }
+  a { color: var(--accent); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; margin: 0; }
+  header .tag { color: var(--muted); font-size: 12px; padding: 2px 8px; background: var(--panel-2); border-radius: 10px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 10px; background: var(--panel-2); font-size: 12px; color: var(--muted); }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .status.ok .dot { background: var(--ok); }
+  .status.ok { color: var(--ok); }
+  .status.err .dot { background: var(--danger); }
+  .status.err { color: var(--danger); }
+
+  .grid-2 { display: grid; grid-template-columns: 360px 1fr; gap: 18px; }
+  @media (max-width: 820px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  section.panel h2 { margin: 0 0 12px 0; font-size: 16px; color: var(--text); }
+  section.panel h2 .hint { float: right; color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input[type="text"], input[type="number"], input[type="date"], input[type="file"], select {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font: inherit;
+  }
+  input[type="file"] { padding: 6px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  button { background: var(--accent); color: #0e1320; border: none; border-radius: 8px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--accent-2); color: #fff; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button.ghost:hover { background: var(--panel-2); }
+  button.danger { background: var(--danger); color: #fff; }
+  button.danger:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .preview { margin-top: 10px; aspect-ratio: 1 / 1; background: var(--panel-2); border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--muted); overflow: hidden; }
+  .preview img { width: 100%; height: 100%; object-fit: cover; }
+
+  #toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  #count { color: var(--muted); font-size: 12px; }
+
+  .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .item .thumb { aspect-ratio: 1 / 1; background: #0a0d14; }
+  .item .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .item .meta { padding: 8px 10px; font-size: 12px; }
+  .item .meta .name { color: var(--text); font-weight: 600; margin-bottom: 4px; word-break: break-word; }
+  .item .meta .kv { color: var(--muted); display: flex; justify-content: space-between; gap: 4px; }
+  .item .meta .kv b { color: var(--text); font-weight: 500; }
+  .item .meta .footer { margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .item .meta .id { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; }
+  .item .meta .del { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 3px 8px; font-size: 11px; border-radius: 6px; font-weight: 500; }
+  .item .meta .del:hover { background: var(--danger); color: #fff; }
+
+  .empty { color: var(--muted); padding: 28px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+
+  #toasts { position: fixed; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; max-width: 360px; }
+  .toast { background: var(--panel); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+  .toast.ok { border-color: var(--ok); }
+  .toast.err { border-color: var(--danger); }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ClosetAI <span class="tag">pagina di test</span></h1>
+      <span id="status" class="status"><span class="dot"></span><span id="status-text">backend…</span></span>
+      <button class="ghost" id="ping-btn" style="margin-left:auto">Ping /health</button>
+    </header>
+
+    <div class="grid-2">
+      <section class="panel">
+        <h2>Aggiungi capo <span class="hint">POST /api/v1/items</span></h2>
+        <form id="add-form" autocomplete="off">
+          <label for="f-name">Nome *</label>
+          <input id="f-name" type="text" required maxlength="200" placeholder="Es. T-shirt bordeaux" />
+
+          <div class="row">
+            <div>
+              <label for="f-category">Categoria</label>
+              <input id="f-category" type="text" maxlength="64" placeholder="es. t-shirt" />
+            </div>
+            <div>
+              <label for="f-color">Colore</label>
+              <input id="f-color" type="text" maxlength="32" placeholder="es. bordeaux" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="f-price">Prezzo (€)</label>
+              <input id="f-price" type="number" min="0" step="0.01" placeholder="19.90" />
+            </div>
+            <div>
+              <label for="f-date">Data acquisto</label>
+              <input id="f-date" type="date" />
+            </div>
+          </div>
+
+          <label for="f-image">Immagine * <span style="color:var(--muted)">(jpg, png, webp ≤ 10MB)</span></label>
+          <input id="f-image" type="file" accept="image/jpeg,image/png,image/webp" required />
+          <div class="preview" id="preview"><span>Anteprima immagine</span></div>
+
+          <div class="actions">
+            <button type="submit" id="submit-btn">Carica capo</button>
+            <button type="button" class="ghost" id="reset-btn">Pulisci</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div id="toolbar">
+          <h2 style="margin:0">Capi nel guardaroba <span class="hint">GET /api/v1/items</span></h2>
+          <div style="display:flex; gap:8px; align-items:center">
+            <span id="count"></span>
+            <button class="ghost" id="refresh-btn">Aggiorna</button>
+          </div>
+        </div>
+        <div id="items-area">
+          <div class="empty">Caricamento…</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+<script>
+const API = "/api/v1";
+
+const $ = (sel) => document.querySelector(sel);
+const itemsArea = $("#items-area");
+const countEl = $("#count");
+const statusEl = $("#status");
+const statusText = $("#status-text");
+
+function toast(msg, kind = "ok", ms = 3500) {
+  const t = document.createElement("div");
+  t.className = "toast " + kind;
+  t.textContent = msg;
+  $("#toasts").appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+async function ping() {
+  statusEl.className = "status";
+  statusText.textContent = "backend…";
+  try {
+    const r = await fetch(`${API}/health`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    statusEl.className = "status ok";
+    statusText.textContent = `${j.service} • ${j.status}`;
+  } catch (e) {
+    statusEl.className = "status err";
+    statusText.textContent = "backend irraggiungibile";
+  }
+}
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  try { return new Date(iso).toLocaleDateString("it-IT"); } catch { return iso; }
+}
+function fmtPrice(v) {
+  if (v == null) return "—";
+  return "€ " + Number(v).toFixed(2);
+}
+
+function itemCard(item) {
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `
+    <div class="thumb">
+      ${item.image_path ? `<img alt="" loading="lazy" src="${API}/items/${item.id}/image" />` : ""}
+    </div>
+    <div class="meta">
+      <div class="name"></div>
+      <div class="kv"><span>Categoria</span><b class="cat"></b></div>
+      <div class="kv"><span>Colore</span><b class="col"></b></div>
+      <div class="kv"><span>Prezzo</span><b class="prc"></b></div>
+      <div class="kv"><span>Acquisto</span><b class="dt"></b></div>
+      <div class="footer">
+        <span class="id">#${item.id}</span>
+        <button class="del" data-id="${item.id}">Elimina</button>
+      </div>
+    </div>
+  `;
+  el.querySelector(".name").textContent = item.name;
+  el.querySelector(".cat").textContent = item.category || "—";
+  el.querySelector(".col").textContent = item.color || "—";
+  el.querySelector(".prc").textContent = fmtPrice(item.price);
+  el.querySelector(".dt").textContent = fmtDate(item.purchase_date);
+  el.querySelector(".del").addEventListener("click", () => onDelete(item));
+  return el;
+}
+
+async function loadItems() {
+  itemsArea.innerHTML = `<div class="empty">Caricamento…</div>`;
+  try {
+    const r = await fetch(`${API}/items?limit=200`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const items = await r.json();
+    countEl.textContent = `${items.length} ${items.length === 1 ? "capo" : "capi"}`;
+    if (items.length === 0) {
+      itemsArea.innerHTML = `<div class="empty">Nessun capo. Carica il primo dal pannello a sinistra.</div>`;
+      return;
+    }
+    const grid = document.createElement("div");
+    grid.className = "items";
+    items.forEach((it) => grid.appendChild(itemCard(it)));
+    itemsArea.replaceChildren(grid);
+  } catch (e) {
+    itemsArea.innerHTML = `<div class="empty">Errore: ${e.message}</div>`;
+    toast("Errore caricamento lista: " + e.message, "err");
+  }
+}
+
+async function onDelete(item) {
+  if (!confirm(`Eliminare "${item.name}" (#${item.id})?`)) return;
+  try {
+    const r = await fetch(`${API}/items/${item.id}`, { method: "DELETE" });
+    if (r.status !== 204) {
+      const body = await r.text();
+      throw new Error("HTTP " + r.status + " " + body);
+    }
+    toast(`Eliminato #${item.id}`);
+    await loadItems();
+  } catch (e) {
+    toast("Errore eliminazione: " + e.message, "err");
+  }
+}
+
+const fileInput = $("#f-image");
+const preview = $("#preview");
+fileInput.addEventListener("change", () => {
+  preview.innerHTML = "";
+  const f = fileInput.files?.[0];
+  if (!f) {
+    preview.innerHTML = "<span>Anteprima immagine</span>";
+    return;
+  }
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(f);
+  img.onload = () => URL.revokeObjectURL(img.src);
+  preview.appendChild(img);
+});
+
+$("#reset-btn").addEventListener("click", () => {
+  $("#add-form").reset();
+  preview.innerHTML = "<span>Anteprima immagine</span>";
+});
+
+$("#add-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const btn = $("#submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Carico…";
+  try {
+    const fd = new FormData();
+    fd.append("name", $("#f-name").value.trim());
+    const category = $("#f-category").value.trim();
+    if (category) fd.append("category", category);
+    const color = $("#f-color").value.trim();
+    if (color) fd.append("color", color);
+    const price = $("#f-price").value;
+    if (price !== "") fd.append("price", price);
+    const date = $("#f-date").value;
+    if (date) fd.append("purchase_date", date);
+    const file = fileInput.files?.[0];
+    if (!file) throw new Error("Seleziona un'immagine.");
+    fd.append("image", file);
+
+    const r = await fetch(`${API}/items`, { method: "POST", body: fd });
+    if (r.status !== 201) {
+      const body = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(body.detail || `HTTP ${r.status}`);
+    }
+    const created = await r.json();
+    toast(`Creato #${created.id} — ${created.name}`);
+    $("#add-form").reset();
+    preview.innerHTML = "<span>Anteprima immagine</span>";
+    await loadItems();
+  } catch (e) {
+    toast("Errore creazione: " + e.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Carica capo";
+  }
+});
+
+$("#refresh-btn").addEventListener("click", loadItems);
+$("#ping-btn").addEventListener("click", ping);
+
+ping();
+loadItems();
+</script>
+</body>
+</html>

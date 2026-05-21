@@ -4,8 +4,9 @@ Closet AI for green clothing — digitalizza il guardaroba, traccia l'uso reale 
 usa il machine learning per ridurre acquisti impulsivi favorendo riparazione, scambio e rivendita.
 
 Progetto didattico per il corso di **Virtual Worlds** (Master in Informatica per la Salute Digitale,
-Università di Pisa). Per il contesto completo, i principi guida e lo stack tecnico vedi
-[CLAUDE.md](CLAUDE.md); per la roadmap operativa vedi [PLAN.md](PLAN.md).
+Università di Pisa). Per la scheda di progetto completa (motivazione, architettura, moduli) vedi
+[PROJECT.md](PROJECT.md); per le convenzioni di codice e le istruzioni a Claude vedi
+[CLAUDE.md](CLAUDE.md); per la roadmap operativa e lo stato dei task vedi [PLAN.md](PLAN.md).
 
 ## Stack
 
@@ -71,6 +72,7 @@ A backend attivo:
 
 - API: http://localhost:8000
 - Documentazione OpenAPI: http://localhost:8000/docs
+- Pagina di test (CRUD via UI HTML): http://localhost:8000/test/
 
 Il frontend di sviluppo gira su http://localhost:5173 (default Vite).
 
