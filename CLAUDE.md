@@ -18,7 +18,7 @@ Il progetto deve dimostrare AI in **due ruoli distinti**:
 
 ## Stack tecnico
 
-- **Backend**: Python 3.11+, FastAPI, SQLAlchemy, SQLite (Postgres in produzione)
+- **Backend**: Python 3.14+, FastAPI, SQLAlchemy, SQLite (Postgres in produzione)
 - **Package manager Python**: [uv](https://docs.astral.sh/uv/) — gestione venv, dipendenze e lockfile
 - **ML**: PyTorch, transformers (HuggingFace), open_clip, eventuale ONNX per export on-device
 - **Frontend**: React (web) + Vite + TypeScript — React Native come estensione mobile
@@ -85,7 +85,7 @@ uv remove <pkg>                  # rimuove una dipendenza
 uv run <comando>                 # esegue un comando nel venv del progetto
 uv run pytest                    # esegue i test
 uv run uvicorn app.main:app --reload    # lancia il backend
-uv python install 3.11           # installa una versione Python specifica
+uv python install 3.14           # installa una versione Python specifica
 uv lock --upgrade                # aggiorna il lockfile
 ```
 
@@ -93,7 +93,7 @@ uv lock --upgrade                # aggiorna il lockfile
 
 Gli script vivono come file separati in `scripts/` — vedere quella cartella per i sorgenti. Convenzioni:
 
-- **`setup.{sh,ps1,bat}`** — installano uv se mancante, eseguono `uv python install 3.11` e `uv sync` nel backend, e `npm install` nel frontend se presente
+- **`setup.{sh,ps1,bat}`** — installano uv se mancante, eseguono `uv python install 3.14` e `uv sync` nel backend, e `npm install` nel frontend se presente
 - **`run-backend.{sh,ps1,bat}`** — lanciano `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 - **`run-frontend.{sh,ps1,bat}`** — lanciano `npm run dev` nel frontend
 

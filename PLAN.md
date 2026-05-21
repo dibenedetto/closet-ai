@@ -9,6 +9,8 @@
 **Fase**: 1 — Scheletro
 **Ultimo aggiornamento**: 2026-05-21
 
+> 1.1 Setup repository completato.
+
 ---
 
 ## Fase 1 — Scheletro funzionante (settimana 1)
@@ -16,14 +18,14 @@
 Obiettivo: avere uno slice verticale end-to-end con upload foto → salvataggio → visualizzazione, con classificazione mock. Nessun ML reale ancora.
 
 ### 1.1 Setup repository
-- [ ] Inizializzare git repo, aggiungere `.gitignore` (Python, Node, dati sensibili, `weights/`, `data/`)
-- [ ] Creare struttura cartelle (`backend/`, `frontend/`, `ml/`, `data/`, `docs/`, `scripts/`)
-- [ ] Creare `scripts/setup.{sh,ps1,bat}` e `scripts/run-{backend,frontend}.{sh,ps1,bat}` secondo le convenzioni in `CLAUDE.md`
-- [ ] Aggiungere `README.md` con istruzioni di avvio
-- [ ] Copiare `CLAUDE.md` nella root
+- [x] Inizializzare git repo, aggiungere `.gitignore` (Python, Node, dati sensibili, `weights/`, `data/`)
+- [x] Creare struttura cartelle (`backend/`, `frontend/`, `ml/`, `data/`, `docs/`, `scripts/`)
+- [x] Creare `scripts/setup.{sh,ps1,bat}` e `scripts/run-{backend,frontend}.{sh,ps1,bat}` secondo le convenzioni in `CLAUDE.md`
+- [x] Aggiungere `README.md` con istruzioni di avvio
+- [x] Copiare `CLAUDE.md` nella root
 
 ### 1.2 Backend — scheletro FastAPI
-- [ ] `uv init` in `backend/`, target Python 3.11
+- [ ] `uv init` in `backend/`, target Python 3.14
 - [ ] `uv add fastapi uvicorn sqlalchemy pydantic pillow python-multipart`
 - [ ] `uv add --dev pytest httpx ruff`
 - [ ] `app/main.py` con app FastAPI, CORS abilitato per frontend locale
