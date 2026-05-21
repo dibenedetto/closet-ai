@@ -21,9 +21,6 @@ Il sistema dimostra l'AI in due ruoli distinti:
 - **AI generativa** come supporto al design e all'esperienza: UI/UX,
   tutorial, try-on virtuale.
 
-Progetto didattico realizzato per il corso di **Virtual Worlds** del
-**Master in Informatica per la Salute Digitale** dell'**Università di Pisa**.
-
 ---
 
 ## 2. Il problema
@@ -277,5 +274,4 @@ Suggerimento di assegnazione (sostituibile in base alle competenze del gruppo):
 
 ## 14. Contatti
 
-Master in Informatica per la Salute Digitale — Università di Pisa.
-Corso di Virtual Worlds — A.A. 2025/2026.
+TODO
