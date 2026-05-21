@@ -6,7 +6,16 @@
       "Bash(uv run python -c 'from fastapi.testclient import TestClient; from app.main import app; client = TestClient\\(app\\); *)",
       "Bash(uv run python -c ' *)",
       "Bash(uv run *)",
-      "Bash(cmd /c \"c:\\\\devel\\\\closet-ai\\\\scripts\\\\setup.bat\")"
+      "Bash(cmd /c \"c:\\\\devel\\\\closet-ai\\\\scripts\\\\setup.bat\")",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -fsS http://127.0.0.1:5173/)",
+      "Bash(curl -fsS http://127.0.0.1:8000/api/v1/health)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP %{http_code}  %{content_type}\\\\n\" http://127.0.0.1:5173/)",
+      "Bash(curl -sS http://127.0.0.1:5173/api/v1/health)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP %{http_code}  %{content_type}\\\\n\" http://127.0.0.1:5173/src/main.tsx)",
+      "Bash(python -c ' *)"
     ]
   }
 }

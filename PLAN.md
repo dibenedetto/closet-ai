@@ -12,6 +12,11 @@
 > 1.1 Setup repository completato.
 > 1.2 Backend scheletro FastAPI completato — health endpoint verificato, tabella `items` creata in SQLite.
 > 1.3 CRUD items completato — upload con validazione MIME/estensione/size, file salvati in `data/items/`, smoke test verde su tutti gli endpoint.
+> 1.4 Classificatore mock completato — `app/ml/classifier.py` con 14 categorie e 13 colori nominabili, chiamato da `POST /items` solo per i campi mancanti. 11 unit test + smoke E2E verdi.
+> 1.5 Test backend completati — fixture `client` con DB SQLite e cartella `items/` isolati per test, 31 test verdi (health + CRUD completo + validazioni + classifier).
+> 1.6 Scheletro frontend completato — Vite 7 + React 19 + TS strict, router con Home / AddItem / ItemDetail, API client tipizzato (`src/api/items.ts`), proxy Vite `/api → :8000`, `VITE_API_BASE_URL` overridabile. Build e dev server smoke verdi.
+> 1.7 UI minima completata — preview immagine nel form, toolbar con counter + refresh, prezzo sulle card, empty-state, stato "Elimino…" durante delete. Build verde (291 kB JS, 93 kB gzip), E2E via proxy Vite verde.
+> 1.8 Documentazione completata — `docs/api.md` con riferimento completo + esempi curl, README aggiornato con comandi backend/frontend/test e link a OpenAPI/ReDoc/test page. Screenshot da catturare manualmente con UI a video (vedi `docs/screenshots/README.md`).
 
 ---
 
@@ -45,33 +50,33 @@ Obiettivo: avere uno slice verticale end-to-end con upload foto → salvataggio 
 - [x] Validazione: formati immagine ammessi (jpg, png, webp), size max 10MB
 
 ### 1.4 Backend — classificazione mock
-- [ ] `app/ml/classifier.py` con funzione `classify(image_path) -> dict`
-- [ ] Restituisce categoria casuale da lista fissa (camicia, jeans, maglione, ...) e colore dominante con PIL
-- [ ] Chiamata automatica in `POST /items` per popolare `category` e `color`
-- [ ] Test unitario sulla funzione mock
+- [x] `app/ml/classifier.py` con funzione `classify(image_path) -> dict`
+- [x] Restituisce categoria casuale da lista fissa (camicia, jeans, maglione, ...) e colore dominante con PIL
+- [x] Chiamata automatica in `POST /items` per popolare `category` e `color`
+- [x] Test unitario sulla funzione mock
 
 ### 1.5 Backend — test
-- [ ] Setup pytest + fixture per DB di test
-- [ ] Test per ogni endpoint CRUD
-- [ ] Test classificazione mock
+- [x] Setup pytest + fixture per DB di test
+- [x] Test per ogni endpoint CRUD
+- [x] Test classificazione mock
 
 ### 1.6 Frontend — scheletro React
-- [ ] Setup Vite + React + TypeScript
-- [ ] Routing base (react-router): home, dettaglio capo, aggiungi capo
-- [ ] Client API in `src/api/items.ts` con fetch tipizzato
-- [ ] Variabile ambiente per URL backend
+- [x] Setup Vite + React + TypeScript
+- [x] Routing base (react-router): home, dettaglio capo, aggiungi capo
+- [x] Client API in `src/api/items.ts` con fetch tipizzato
+- [x] Variabile ambiente per URL backend
 
 ### 1.7 Frontend — UI minima
-- [ ] Pagina lista capi (griglia di card con foto, categoria, colore)
-- [ ] Form upload con preview immagine
-- [ ] Pagina dettaglio capo
-- [ ] Pulsante elimina con conferma
-- [ ] Stile minimale ma pulito (Tailwind o CSS modules)
+- [x] Pagina lista capi (griglia di card con foto, categoria, colore)
+- [x] Form upload con preview immagine
+- [x] Pagina dettaglio capo
+- [x] Pulsante elimina con conferma
+- [x] Stile minimale ma pulito (Tailwind o CSS modules)
 
 ### 1.8 Documentazione
-- [ ] `docs/api.md` con elenco endpoint e payload di esempio
-- [ ] `README.md` aggiornato con comandi: `uvicorn ...`, `npm run dev`
-- [ ] Screenshot della UI nel README
+- [x] `docs/api.md` con elenco endpoint e payload di esempio
+- [x] `README.md` aggiornato con comandi: `uvicorn ...`, `npm run dev`
+- [~] Screenshot della UI nel README — placeholder + istruzioni in `docs/screenshots/README.md`, da catturare manualmente con UI a video
 
 ### Definition of Done — Fase 1
 - Carico una foto dal frontend → la vedo nella lista con categoria mock e colore reale

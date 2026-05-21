@@ -29,6 +29,7 @@ from app.config import (
     MAX_UPLOAD_SIZE,
 )
 from app.db import get_db
+from app.ml.classifier import classify
 from app.models import Item
 from app.schemas import ItemRead
 
@@ -85,7 +86,7 @@ def _validate_and_persist_upload(upload: UploadFile) -> str:
                     out.close()
                     dest.unlink(missing_ok=True)
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail=f"File troppo grande: limite {MAX_UPLOAD_SIZE} byte.",
                     )
                 out.write(chunk)
@@ -125,6 +126,15 @@ def create_item(
     db: Session = Depends(get_db),
 ) -> Item:
     filename = _validate_and_persist_upload(image)
+
+    if category is None or color is None:
+        try:
+            mock = classify(ITEMS_DIR / filename)
+        except Exception:
+            log.warning("Classificazione mock fallita per %s", filename, exc_info=True)
+            mock = {}
+        category = category or mock.get("category")
+        color = color or mock.get("color")
 
     item = Item(
         name=name,
