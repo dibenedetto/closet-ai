@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv init *)",
+      "Bash(uv add *)",
+      "Bash(uv run python -c 'from fastapi.testclient import TestClient; from app.main import app; client = TestClient\\(app\\); *)",
+      "Bash(uv run python -c ' *)",
+      "Bash(uv run *)"
+    ]
+  }
+}

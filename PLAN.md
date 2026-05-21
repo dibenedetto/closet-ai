@@ -10,6 +10,7 @@
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
+> 1.2 Backend scheletro FastAPI completato — health endpoint verificato, tabella `items` creata in SQLite.
 
 ---
 
@@ -25,14 +26,14 @@ Obiettivo: avere uno slice verticale end-to-end con upload foto → salvataggio 
 - [x] Copiare `CLAUDE.md` nella root
 
 ### 1.2 Backend — scheletro FastAPI
-- [ ] `uv init` in `backend/`, target Python 3.14
-- [ ] `uv add fastapi uvicorn sqlalchemy pydantic pillow python-multipart`
-- [ ] `uv add --dev pytest httpx ruff`
-- [ ] `app/main.py` con app FastAPI, CORS abilitato per frontend locale
-- [ ] Configurazione SQLite (`app/db.py`)
-- [ ] Modello `Item`: id, name, category, color, image_path, price, purchase_date, created_at
-- [ ] Migrazione iniziale (Alembic o create_all per MVP)
-- [ ] Endpoint health check `GET /api/v1/health`
+- [x] `uv init` in `backend/`, target Python 3.14
+- [x] `uv add fastapi uvicorn sqlalchemy pydantic pillow python-multipart`
+- [x] `uv add --dev pytest httpx ruff`
+- [x] `app/main.py` con app FastAPI, CORS abilitato per frontend locale
+- [x] Configurazione SQLite (`app/db.py`)
+- [x] Modello `Item`: id, name, category, color, image_path, price, purchase_date, created_at
+- [x] Migrazione iniziale (Alembic o create_all per MVP)
+- [x] Endpoint health check `GET /api/v1/health`
 
 ### 1.3 Backend — CRUD items
 - [ ] `POST /api/v1/items` — upload foto + metadata, salva file su disco in `data/items/`
