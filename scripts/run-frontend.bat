@@ -6,7 +6,7 @@ set "SCRIPT_DIR=%~dp0"
 set "FRONTEND_DIR=%SCRIPT_DIR%..\frontend"
 
 if not exist "%FRONTEND_DIR%\package.json" (
-    echo !! Frontend non inizializzato in %FRONTEND_DIR% (manca package.json).
+    echo !! Frontend non inizializzato in %FRONTEND_DIR%: manca package.json.
     echo    Esegui prima scripts\setup.bat oppure inizializza Vite+React.
     exit /b 1
 )

@@ -4,14 +4,19 @@ REM   - installa uv se mancante
 REM   - installa Python 3.14 via uv
 REM   - sincronizza le dipendenze del backend
 REM   - installa le dipendenze del frontend (se presente)
+REM Nota cmd.exe: NON usare parentesi tonde nei messaggi echo dentro blocchi
+REM if/else (...), chiudono il blocco e causano il classico errore di parser.
 setlocal enableextensions
 
 set "SCRIPT_DIR=%~dp0"
-set "ROOT_DIR=%SCRIPT_DIR%.."
+REM Normalizza ROOT_DIR (toglie il \.. finale) usando pushd/popd
+pushd "%SCRIPT_DIR%.." >nul
+set "ROOT_DIR=%CD%"
+popd >nul
 set "BACKEND_DIR=%ROOT_DIR%\backend"
 set "FRONTEND_DIR=%ROOT_DIR%\frontend"
 
-echo ==^> ClosetAI setup (root: %ROOT_DIR%)
+echo ==^> ClosetAI setup root: %ROOT_DIR%
 
 where uv >nul 2>nul
 if errorlevel 1 (
@@ -44,7 +49,7 @@ if exist "%BACKEND_DIR%\pyproject.toml" (
     )
     popd
 ) else (
-    echo ==^> Backend non ancora inizializzato (manca pyproject.toml) -- salto uv sync
+    echo ==^> Backend non ancora inizializzato: manca pyproject.toml -- salto uv sync
 )
 
 if exist "%FRONTEND_DIR%\package.json" (
@@ -63,7 +68,7 @@ if exist "%FRONTEND_DIR%\package.json" (
     )
     popd
 ) else (
-    echo ==^> Frontend non ancora inizializzato (manca package.json) -- salto npm install
+    echo ==^> Frontend non ancora inizializzato: manca package.json -- salto npm install
 )
 
 echo ==^> Setup completato.
