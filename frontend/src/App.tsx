@@ -12,6 +12,9 @@ export default function App() {
           <NavLink to="/items/new" className={({ isActive }) => (isActive ? 'active' : '')}>
             Aggiungi capo
           </NavLink>
+          <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Dashboard
+          </NavLink>
         </nav>
       </header>
       <main>

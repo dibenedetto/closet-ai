@@ -1,11 +1,14 @@
-"""Modello ORM per un capo del guardaroba."""
+"""Modello ORM per un capo del guardaroba.
 
-from __future__ import annotations
+NB: niente `from __future__ import annotations` qui — SQLAlchemy 2.0 fa
+introspection runtime delle annotazioni `Mapped[...]` e su Python 3.14 le
+stringhe deferred di `__future__.annotations` non risolvono correttamente.
+"""
 
 from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, DateTime, Float, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
@@ -27,4 +30,13 @@ class Item(Base):
     classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    # Forward ref "WearEvent": SQLAlchemy lo risolve via registry interno; non
+    # serve importare il modello concreto qui (evita il circular import).
+    wear_events: Mapped[list["WearEvent"]] = relationship(  # noqa: F821
+        back_populates="item",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="WearEvent.worn_on.desc()",
     )

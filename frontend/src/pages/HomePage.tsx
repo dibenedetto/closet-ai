@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 import { itemImageUrl, listItems, type Item } from '../api/items'
+import { logWear } from '../api/wear'
 
 export default function HomePage() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [wearing, setWearing] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setRefreshing(true)
@@ -24,6 +26,20 @@ export default function HomePage() {
     void load()
   }, [load])
 
+  async function onQuickWear(ev: MouseEvent<HTMLButtonElement>, item: Item) {
+    ev.preventDefault()
+    ev.stopPropagation()
+    if (wearing != null) return
+    setWearing(item.id)
+    try {
+      await logWear(item.id)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setWearing(null)
+    }
+  }
+
   if (error) {
     return (
       <p className="error">
@@ -38,6 +54,9 @@ export default function HomePage() {
       <div className="toolbar">
         <h2 style={{ margin: 0 }}>Guardaroba</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+          <Link to="/dashboard" className="ghost" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}>
+            Dashboard
+          </Link>
           <span className="count">
             {items.length} {items.length === 1 ? 'capo' : 'capi'}
           </span>
@@ -68,6 +87,15 @@ export default function HomePage() {
                   <div className="price">€ {it.price.toFixed(2)}</div>
                 )}
               </div>
+              <button
+                type="button"
+                className="quick-wear"
+                title="Registra che l'hai indossato oggi"
+                onClick={(ev) => void onQuickWear(ev, it)}
+                disabled={wearing === it.id}
+              >
+                {wearing === it.id ? '…' : '✓ oggi'}
+              </button>
             </Link>
           ))}
         </div>

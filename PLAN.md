@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 2 — Vision reale (completata)
+**Fase**: 3 — Wear log + cost-per-wear (completata)
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -18,6 +18,7 @@
 > 1.7 UI minima completata — preview immagine nel form, toolbar con counter + refresh, prezzo sulle card, empty-state, stato "Elimino…" durante delete. Build verde (291 kB JS, 93 kB gzip), E2E via proxy Vite verde.
 > 1.8 Documentazione completata — `docs/api.md` con riferimento completo + esempi curl, README aggiornato con comandi backend/frontend/test e link a OpenAPI/ReDoc/test page. Screenshot da catturare manualmente con UI a video (vedi `docs/screenshots/README.md`).
 > 2.0 Fase 2 completata — Fashion-CLIP server-side, embedding 512d in ChromaDB, colore dominante con quantize + bg filter, endpoint `/reclassify`, UI con badge confidenza. 37 test verdi, benchmark e ADR in `docs/architecture.md`.
+> 3.0 Fase 3 completata — `WearEvent` con cascade delete, 6 endpoint REST (`wear`, `wears`, `batch`, `wear-events/{id}`, `items/{id}/stats`, `stats/wardrobe`, `stats/ghosts`), service `services/stats.py`, UI con quick-wear sulle card + storico nel detail + dashboard impatto. 51 test verdi (14 nuovi). PRAGMA `foreign_keys=ON` su SQLite.
 
 ---
 
@@ -105,12 +106,12 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
 ## Fase 3 — Wear log e cost-per-wear (settimana 3)
 
-- [ ] Modello `WearEvent`: id, item_id, date, occasion (opzionale)
-- [ ] Endpoint registrazione utilizzo (singolo o batch)
-- [ ] Calcolo `wear_count`, `cost_per_wear`, `last_worn` per ogni capo
-- [ ] Identificazione capi "fantasma" (mai indossati dopo X giorni dall'acquisto)
-- [ ] UI: pulsante rapido "indossato oggi" sulla card del capo
-- [ ] UI: vista dashboard con statistiche personali
+- [x] Modello `WearEvent`: id, item_id, **worn_on** (rinominato da `date` per evitare shadow di tipi), occasion, created_at
+- [x] Endpoint registrazione utilizzo (singolo `POST /items/{id}/wear` + batch `POST /wear-events/batch`)
+- [x] Calcolo `wear_count`, `cost_per_wear`, `last_worn`, `days_since_last_worn` (`GET /items/{id}/stats`)
+- [x] Identificazione capi "fantasma" — endpoint `GET /stats/ghosts?ghost_after_days=N` + flag `is_ghost` su `ItemStats`
+- [x] UI: pulsante rapido "✓ oggi" sulla card del capo (overlay angolo basso-destra)
+- [x] UI: pagina `/dashboard` con `WardrobeStats` (totale capi, utilizzi, fantasma, investimento, cost-per-wear medio, top worn, ghosts)
 
 ---
 

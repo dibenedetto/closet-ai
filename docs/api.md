@@ -218,6 +218,145 @@ curl -s -X POST http://localhost:8000/api/v1/items/12/reclassify | jq .
 
 ---
 
+## Wear log e statistiche
+
+### `POST /items/{item_id}/wear`
+
+Registra un utilizzo del capo (un "wear event").
+
+**Body** (JSON, opzionale):
+
+```json
+{ "worn_on": "2026-05-21", "occasion": "lavoro" }
+```
+
+| campo      | tipo   | obbl. | default      | note                          |
+| ---------- | ------ | ----- | ------------ | ----------------------------- |
+| `worn_on`  | date   | no    | oggi         | ISO `YYYY-MM-DD`              |
+| `occasion` | string | no    | `null`       | max 64 caratteri              |
+
+**Risposta `201`** — `WearEvent` creato.
+**Risposta `404`** — item inesistente.
+
+---
+
+### `GET /items/{item_id}/wears`
+
+Lista cronologica (desc) degli eventi di utilizzo per il capo.
+
+**Risposta `200`** — `WearEvent[]`.
+**Risposta `404`** — item inesistente.
+
+---
+
+### `POST /wear-events/batch`
+
+Registra più eventi in una transazione singola. Utile per inserimenti
+massivi dall'app mobile o da uno specchio smart.
+
+**Body**:
+
+```json
+{
+  "events": [
+    { "item_id": 12, "worn_on": "2026-05-20" },
+    { "item_id": 12, "worn_on": "2026-05-21", "occasion": "ufficio" },
+    { "item_id": 7 }
+  ]
+}
+```
+
+**Risposta `201`** — `WearEvent[]` (preserva l'ordine).
+**Risposta `404`** — se almeno un `item_id` non esiste (la transazione viene annullata).
+
+---
+
+### `DELETE /wear-events/{event_id}`
+
+Elimina un singolo wear event.
+
+**Risposta `204` / `404`**.
+
+---
+
+### `GET /items/{item_id}/stats`
+
+Statistiche del capo: count, ultimo utilizzo, cost-per-wear, flag fantasma.
+
+**Query string**
+
+| nome              | default | range  | descrizione                                    |
+| ----------------- | ------- | ------ | ---------------------------------------------- |
+| `ghost_after_days`| 30      | 1–365  | soglia per considerare il capo "fantasma"      |
+
+**Risposta `200`** — `ItemStats`:
+
+```json
+{
+  "item_id": 12,
+  "wear_count": 4,
+  "last_worn": "2026-05-15",
+  "days_since_last_worn": 6,
+  "cost_per_wear": 4.99,
+  "is_ghost": false,
+  "ghost_after_days": 30
+}
+```
+
+---
+
+### `GET /stats/wardrobe`
+
+Statistiche aggregate sul guardaroba.
+
+**Query string**
+
+| nome              | default | range  | descrizione                            |
+| ----------------- | ------- | ------ | -------------------------------------- |
+| `ghost_after_days`| 30      | 1–365  | soglia fantasma                        |
+| `top_n`           | 5       | 1–50   | dimensione classifica top-worn         |
+
+**Risposta `200`** — `WardrobeStats`:
+
+```json
+{
+  "total_items": 12,
+  "total_wears": 47,
+  "avg_wears_per_item": 3.92,
+  "ghost_count": 2,
+  "ghost_after_days": 30,
+  "total_investment": 690.50,
+  "avg_cost_per_wear": 12.30,
+  "top_worn": [
+    { "item_id": 12, "name": "T-shirt bordeaux", "wear_count": 8 }
+  ]
+}
+```
+
+---
+
+### `GET /stats/ghosts`
+
+Lista dei capi mai indossati e posseduti da almeno `ghost_after_days`
+(default 30). Ordina dai più recenti aggiunti.
+
+**Risposta `200`** — `GhostItem[]`:
+
+```json
+[
+  {
+    "item_id": 5,
+    "name": "Maglione verde",
+    "category": "maglione",
+    "purchase_date": "2026-01-10",
+    "days_owned": 131,
+    "price": 49.90
+  }
+]
+```
+
+---
+
 ## Schemi
 
 ### `Item`
@@ -233,6 +372,18 @@ interface Item {
   purchase_date: string | null           // "YYYY-MM-DD"
   classification_confidence: number | null  // 0–1, null per mock o se ignota
   created_at: string                     // ISO-8601 UTC
+}
+```
+
+### `WearEvent`
+
+```ts
+interface WearEvent {
+  id: number
+  item_id: number
+  worn_on: string      // "YYYY-MM-DD"
+  occasion: string | null
+  created_at: string   // ISO-8601 UTC
 }
 ```
 

@@ -6,6 +6,7 @@ import App from './App'
 import HomePage from './pages/HomePage'
 import AddItemPage from './pages/AddItemPage'
 import ItemDetailPage from './pages/ItemDetailPage'
+import DashboardPage from './pages/DashboardPage'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'items/new', element: <AddItemPage /> },
       { path: 'items/:id', element: <ItemDetailPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
     ],
   },
 ])

@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import CORS_ORIGINS
 from app.db import init_db
-from app.routers import health, items
+from app.routers import health, items, stats, wear
 
 API_PREFIX = "/api/v1"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -46,6 +46,8 @@ app.add_middleware(
 
 app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(items.router, prefix=API_PREFIX)
+app.include_router(wear.router, prefix=API_PREFIX)
+app.include_router(stats.router, prefix=API_PREFIX)
 
 if STATIC_DIR.is_dir():
     app.mount("/test", StaticFiles(directory=STATIC_DIR, html=True), name="test")
