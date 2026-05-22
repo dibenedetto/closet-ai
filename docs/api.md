@@ -357,6 +357,89 @@ Lista dei capi mai indossati e posseduti da almeno `ghost_after_days`
 
 ---
 
+## Outfit recommender
+
+### `GET /outfits/suggest`
+
+Genera fino a `count` proposte di outfit per la data indicata, condizionate
+dal meteo recuperato via Open-Meteo (con fallback se l'API non risponde).
+
+**Query string**
+
+| nome    | tipo  | default              | range                | descrizione                       |
+| ------- | ----- | -------------------- | -------------------- | --------------------------------- |
+| `date`  | date  | oggi                 | YYYY-MM-DD           | giorno per cui suggerire l'outfit |
+| `count` | int   | 3                    | 1–10                 | numero proposte                   |
+| `lat`   | float | `CLOSETAI_DEFAULT_LAT` (43.7228 = Pisa) | -90..90  | latitudine                      |
+| `lon`   | float | `CLOSETAI_DEFAULT_LON` (10.4017 = Pisa) | -180..180 | longitudine                    |
+
+**Risposta `200`** — `OutfitSuggestResponse`:
+
+```json
+{
+  "target_date": "2026-05-22",
+  "weather": {
+    "target_date": "2026-05-22",
+    "temperature_c": 18.5,
+    "precipitation_mm": 0.0,
+    "wind_kmh": 12.0,
+    "weather_code": 1,
+    "source": "open-meteo"
+  },
+  "outfits": [
+    {
+      "items": [
+        { "id": 12, "name": "T-shirt blu", "category": "t-shirt", "color": "blu", ... }
+      ],
+      "score": 0.83,
+      "color_score": 0.90,
+      "weather_score": 0.85,
+      "ghost_bonus": 0.08,
+      "rationale": "colori: blu, nero; leggero per il caldo; contiene capi mai indossati"
+    }
+  ]
+}
+```
+
+Lo score è `0.55 * color_score + 0.35 * weather_score + ghost_bonus`,
+clamped a `[0, 1]`. Se Open-Meteo non risponde, `weather.source = "fallback"`
+e i valori sono valori "miti" (~18°C, no pioggia).
+
+**Esempio**
+
+```bash
+curl -s "http://localhost:8000/api/v1/outfits/suggest?count=3&date=2026-05-22" | jq .
+```
+
+---
+
+### `POST /outfits/feedback`
+
+Salva un like/dislike su una proposta di outfit (per analisi future).
+
+**Body**:
+
+```json
+{ "item_ids": [12, 7], "rating": 1, "occasion": "lavoro" }
+```
+
+| campo      | tipo       | obbl. | vincoli            |
+| ---------- | ---------- | ----- | ------------------ |
+| `item_ids` | int[]      | sì    | 1–10 elementi      |
+| `rating`   | int        | sì    | `1` o `-1`         |
+| `occasion` | string     | no    | max 64 caratteri   |
+
+**Risposta `201`** — `OutfitFeedback`.
+**Risposta `422`** — `rating=0` o array vuoto.
+
+---
+
+### `GET /outfits/feedback`
+
+Lista cronologica (desc) dei feedback salvati. Query: `limit` (1–200, default 50).
+
+---
+
 ## Schemi
 
 ### `Item`
@@ -384,6 +467,46 @@ interface WearEvent {
   worn_on: string      // "YYYY-MM-DD"
   occasion: string | null
   created_at: string   // ISO-8601 UTC
+}
+```
+
+### `OutfitSuggestion` / `OutfitSuggestResponse`
+
+```ts
+interface WeatherSummary {
+  target_date: string
+  temperature_c: number
+  precipitation_mm: number
+  wind_kmh: number
+  weather_code: number
+  source: 'open-meteo' | 'fallback'
+}
+
+interface OutfitSuggestion {
+  items: Item[]
+  score: number          // 0..1
+  color_score: number    // 0..1
+  weather_score: number  // 0..1
+  ghost_bonus: number    // 0..0.15
+  rationale: string
+}
+
+interface OutfitSuggestResponse {
+  target_date: string
+  weather: WeatherSummary
+  outfits: OutfitSuggestion[]
+}
+```
+
+### `OutfitFeedback`
+
+```ts
+interface OutfitFeedback {
+  id: number
+  item_ids: number[]
+  rating: 1 | -1
+  occasion: string | null
+  created_at: string
 }
 ```
 
@@ -455,6 +578,8 @@ effettivi del frontend.
 | `CLOSETAI_CHROMA_DIR`    | `<CLOSETAI_DATA_DIR>/chroma`         | persistenza collection ChromaDB                      |
 | `CLOSETAI_DATABASE_URL`  | `sqlite:///<CLOSETAI_DB_PATH>`       | DSN SQLAlchemy completo (sovrascrive)                |
 | `CLOSETAI_CLASSIFIER`    | `fashion-clip`                       | `mock` per fallback / test; `fashion-clip` per ML.   |
+| `CLOSETAI_DEFAULT_LAT`   | `43.7228` (Pisa)                     | latitudine di default per `/outfits/suggest`.        |
+| `CLOSETAI_DEFAULT_LON`   | `10.4017` (Pisa)                     | longitudine di default per `/outfits/suggest`.       |
 
 I test impostano questi automaticamente su una tempdir isolata e forzano
 `CLOSETAI_CLASSIFIER=mock` (vedi `backend/tests/conftest.py`).

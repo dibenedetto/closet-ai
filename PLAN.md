@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 3 — Wear log + cost-per-wear (completata)
+**Fase**: 4 — Outfit recommender (completata)
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -19,6 +19,7 @@
 > 1.8 Documentazione completata — `docs/api.md` con riferimento completo + esempi curl, README aggiornato con comandi backend/frontend/test e link a OpenAPI/ReDoc/test page. Screenshot da catturare manualmente con UI a video (vedi `docs/screenshots/README.md`).
 > 2.0 Fase 2 completata — Fashion-CLIP server-side, embedding 512d in ChromaDB, colore dominante con quantize + bg filter, endpoint `/reclassify`, UI con badge confidenza. 37 test verdi, benchmark e ADR in `docs/architecture.md`.
 > 3.0 Fase 3 completata — `WearEvent` con cascade delete, 6 endpoint REST (`wear`, `wears`, `batch`, `wear-events/{id}`, `items/{id}/stats`, `stats/wardrobe`, `stats/ghosts`), service `services/stats.py`, UI con quick-wear sulle card + storico nel detail + dashboard impatto. 51 test verdi (14 nuovi). PRAGMA `foreign_keys=ON` su SQLite.
+> 4.0 Fase 4 completata — recommender con generazione combinazioni (top/bottom/dress/outerwear/shoes), score colore (HSL) + meteo (Open-Meteo + fallback) + bonus capi fantasma. Endpoint `/outfits/suggest`, `/outfits/feedback` (CRUD), tabella `outfit_feedback`. Pagina `/today` "Cosa metto oggi?" con breakdown e like/dislike. 68 test verdi (17 nuovi).
 
 ---
 
@@ -117,13 +118,13 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
 ## Fase 4 — Outfit recommender (settimana 4)
 
-- [ ] Modulo `services/recommender.py`
-- [ ] Compatibilità cromatica (regole base: complementari, analoghi, neutri)
-- [ ] Similarità embedding per varietà
-- [ ] Integrazione API meteo (Open-Meteo, gratuita, no auth)
-- [ ] Endpoint `GET /api/v1/outfits/suggest?date=...`
-- [ ] UI: pagina "Cosa metto oggi?" con 3 proposte
-- [ ] Feedback utente (like/dislike) salvato per future iterazioni
+- [x] Modulo `services/recommender.py` con generazione candidati + scoring
+- [x] Compatibilità cromatica HSL (complementari, analoghi, neutri via whitelist + saturazione) in `services/color_compat.py`
+- [x] Diversità via shuffling candidati + filtro overlap (la similarità su embedding ChromaDB è già pronta per Fase 6)
+- [x] Integrazione Open-Meteo (`services/weather.py`) con fallback templato in caso di network down
+- [x] Endpoint `GET /api/v1/outfits/suggest?date=&count=&lat=&lon=` + `POST/GET /outfits/feedback`
+- [x] UI: pagina `/today` "Cosa metto oggi?" con N proposte, breakdown score colore/meteo, like/dislike, "Indosso questo" multi-wear
+- [x] Feedback utente persistente in tabella `outfit_feedback`
 
 ---
 

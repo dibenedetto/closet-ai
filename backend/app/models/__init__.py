@@ -1,6 +1,7 @@
 """Modelli ORM dell'applicazione."""
 
 from app.models.item import Item
+from app.models.outfit_feedback import OutfitFeedback
 from app.models.wear_event import WearEvent
 
-__all__ = ["Item", "WearEvent"]
+__all__ = ["Item", "OutfitFeedback", "WearEvent"]

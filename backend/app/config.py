@@ -29,6 +29,11 @@ CORS_ORIGINS: list[str] = [
     "http://127.0.0.1:5173",
 ]
 
+# Coordinate di default per il meteo (Pisa, IT). Sovrascrivibili via env o
+# query parameter su `GET /outfits/suggest`.
+DEFAULT_LAT: float = float(os.environ.get("CLOSETAI_DEFAULT_LAT", "43.7228"))
+DEFAULT_LON: float = float(os.environ.get("CLOSETAI_DEFAULT_LON", "10.4017"))
+
 # Vincoli upload immagini
 MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
 ALLOWED_IMAGE_CONTENT_TYPES: frozenset[str] = frozenset(
