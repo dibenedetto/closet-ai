@@ -15,6 +15,7 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
 
 DATA_DIR: Path = Path(os.environ.get("CLOSETAI_DATA_DIR", PROJECT_ROOT / "data"))
 ITEMS_DIR: Path = DATA_DIR / "items"
+CHROMA_DIR: Path = Path(os.environ.get("CLOSETAI_CHROMA_DIR", DATA_DIR / "chroma"))
 DB_PATH: Path = Path(os.environ.get("CLOSETAI_DB_PATH", DATA_DIR / "closetai.db"))
 
 DATABASE_URL: str = os.environ.get(
@@ -42,3 +43,4 @@ def ensure_dirs() -> None:
     """Crea le directory necessarie per lo storage locale."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ITEMS_DIR.mkdir(parents=True, exist_ok=True)
+    CHROMA_DIR.mkdir(parents=True, exist_ok=True)

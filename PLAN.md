@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 1 — Scheletro
+**Fase**: 2 — Vision reale (completata)
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -17,6 +17,7 @@
 > 1.6 Scheletro frontend completato — Vite 7 + React 19 + TS strict, router con Home / AddItem / ItemDetail, API client tipizzato (`src/api/items.ts`), proxy Vite `/api → :8000`, `VITE_API_BASE_URL` overridabile. Build e dev server smoke verdi.
 > 1.7 UI minima completata — preview immagine nel form, toolbar con counter + refresh, prezzo sulle card, empty-state, stato "Elimino…" durante delete. Build verde (291 kB JS, 93 kB gzip), E2E via proxy Vite verde.
 > 1.8 Documentazione completata — `docs/api.md` con riferimento completo + esempi curl, README aggiornato con comandi backend/frontend/test e link a OpenAPI/ReDoc/test page. Screenshot da catturare manualmente con UI a video (vedi `docs/screenshots/README.md`).
+> 2.0 Fase 2 completata — Fashion-CLIP server-side, embedding 512d in ChromaDB, colore dominante con quantize + bg filter, endpoint `/reclassify`, UI con badge confidenza. 37 test verdi, benchmark e ADR in `docs/architecture.md`.
 
 ---
 
@@ -90,15 +91,15 @@ Obiettivo: avere uno slice verticale end-to-end con upload foto → salvataggio 
 
 Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
-- [ ] Valutare opzioni: CLIP zero-shot vs fashion classifier dedicato (es. `valhalla/fashion-clip`)
-- [ ] Decisione documentata in `docs/architecture.md`
-- [ ] Integrazione modello scelto in `app/ml/classifier.py`
-- [ ] Estrazione embedding del capo (vettore salvato in DB come blob o file npy)
-- [ ] Estrazione colore dominante migliorata (es. k-means su pixel)
-- [ ] Endpoint `POST /items/{id}/reclassify` per ri-eseguire la classificazione
-- [ ] Benchmark tempi inferenza (CPU vs GPU se disponibile)
-- [ ] Decisione su on-device vs server-side, motivata
-- [ ] Aggiornare UI per mostrare confidenza della classificazione
+- [x] Valutare opzioni: CLIP zero-shot vs fashion classifier dedicato (es. `valhalla/fashion-clip`)
+- [x] Decisione documentata in `docs/architecture.md` (ADR-003 / ADR-004 / ADR-005)
+- [x] Integrazione modello scelto in `app/ml/classifier.py` — `patrickjohncyh/fashion-clip` zero-shot
+- [x] Estrazione embedding del capo — 512d in ChromaDB (`data/chroma/`, collection `items`)
+- [x] Estrazione colore dominante migliorata — `quantize(N=5, MEDIANCUT)` con filtro sfondo chiaro
+- [x] Endpoint `POST /items/{id}/reclassify` per ri-eseguire la classificazione
+- [x] Benchmark tempi inferenza — Mock 4ms, Fashion-CLIP 64ms CPU (post-warmup), warmup 7.6s
+- [x] Decisione su on-device vs server-side — server-side (ADR-005); ONNX/CoreML rimandato a Fase 5-6
+- [x] Aggiornare UI per mostrare confidenza della classificazione — badge colorato + bottone "Riclassifica"
 
 ---
 

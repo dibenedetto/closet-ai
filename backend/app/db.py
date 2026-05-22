@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import DATABASE_URL, ensure_dirs
@@ -27,12 +27,35 @@ class Base(DeclarativeBase):
 
 
 def init_db() -> None:
-    """Crea le directory dati e tutte le tabelle mancanti."""
+    """Crea le directory dati, tutte le tabelle mancanti, e applica le
+    micro-migrazioni idempotenti per i DB esistenti (vedi ADR-002)."""
     ensure_dirs()
     # Import differito per assicurare che i modelli siano registrati su Base.
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _apply_lightweight_migrations()
+
+
+# Colonne aggiunte dopo Fase 1, gestite con ALTER TABLE idempotente
+# fino all'introduzione di Alembic (vedi ADR-002).
+_ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
+    "items": [
+        ("classification_confidence", "FLOAT"),
+    ],
+}
+
+
+def _apply_lightweight_migrations() -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table, cols in _ADDED_COLUMNS.items():
+            if not inspector.has_table(table):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, sql_type in cols:
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
 
 
 def get_db() -> Generator[Session, None, None]:

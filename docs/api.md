@@ -183,6 +183,41 @@ curl -s http://localhost:8000/api/v1/items/12/image -o capo.jpg
 
 ---
 
+### `POST /items/{id}/reclassify`
+
+Ri-esegue la classificazione del capo: aggiorna `category`, `color`,
+`classification_confidence` nel DB e l'embedding nella collection ChromaDB.
+Utile dopo aver aggiornato il modello, modificato i prompt o caricato
+un'immagine sotto stress (es. con sfondo non standard).
+
+**Risposta `200`** — oggetto `Item` aggiornato.
+
+**Risposta `404`** — item inesistente, o file immagine mancante sul disco.
+
+**Risposta `400`** — item presente ma senza `image_path` associato.
+
+**Esempio**
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/items/12/reclassify | jq .
+```
+
+```json
+{
+  "id": 12,
+  "name": "T-shirt bordeaux",
+  "category": "t-shirt",
+  "color": "rosso",
+  "image_path": "8b7e138a423f44668b45e27ff22d4146.png",
+  "price": 19.9,
+  "purchase_date": "2025-09-10",
+  "classification_confidence": 0.83,
+  "created_at": "2026-05-21T17:08:01.612142Z"
+}
+```
+
+---
+
 ## Schemi
 
 ### `Item`
@@ -193,10 +228,11 @@ interface Item {
   name: string
   category: string | null
   color: string | null
-  image_path: string | null      // filename, non path completo
+  image_path: string | null              // filename, non path completo
   price: number | null
-  purchase_date: string | null   // "YYYY-MM-DD"
-  created_at: string             // ISO-8601 UTC
+  purchase_date: string | null           // "YYYY-MM-DD"
+  classification_confidence: number | null  // 0–1, null per mock o se ignota
+  created_at: string                     // ISO-8601 UTC
 }
 ```
 
@@ -261,11 +297,13 @@ effettivi del frontend.
 
 ## Variabili d'ambiente lato backend
 
-| variabile              | default                              | uso                                  |
-| ---------------------- | ------------------------------------ | ------------------------------------ |
-| `CLOSETAI_DATA_DIR`    | `<repo>/data`                        | root dello storage locale            |
-| `CLOSETAI_DB_PATH`     | `<CLOSETAI_DATA_DIR>/closetai.db`    | percorso del file SQLite             |
-| `CLOSETAI_DATABASE_URL`| `sqlite:///<CLOSETAI_DB_PATH>`       | DSN SQLAlchemy completo (sovrascrive)|
+| variabile                | default                              | uso                                                  |
+| ------------------------ | ------------------------------------ | ---------------------------------------------------- |
+| `CLOSETAI_DATA_DIR`      | `<repo>/data`                        | root dello storage locale                            |
+| `CLOSETAI_DB_PATH`       | `<CLOSETAI_DATA_DIR>/closetai.db`    | percorso del file SQLite                             |
+| `CLOSETAI_CHROMA_DIR`    | `<CLOSETAI_DATA_DIR>/chroma`         | persistenza collection ChromaDB                      |
+| `CLOSETAI_DATABASE_URL`  | `sqlite:///<CLOSETAI_DB_PATH>`       | DSN SQLAlchemy completo (sovrascrive)                |
+| `CLOSETAI_CLASSIFIER`    | `fashion-clip`                       | `mock` per fallback / test; `fashion-clip` per ML.   |
 
-I test impostano questi automaticamente su una tempdir isolata (vedi
-`backend/tests/conftest.py`).
+I test impostano questi automaticamente su una tempdir isolata e forzano
+`CLOSETAI_CLASSIFIER=mock` (vedi `backend/tests/conftest.py`).

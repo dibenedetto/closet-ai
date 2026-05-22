@@ -24,6 +24,7 @@ class Item(Base):
     image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )

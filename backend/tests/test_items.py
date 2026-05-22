@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.ml.classifier import CATEGORIES, NAMED_COLORS
+from app.ml.classifier import CATEGORIES
+from app.ml.color import NAMED_COLORS
 
 
 def test_list_empty(client) -> None:

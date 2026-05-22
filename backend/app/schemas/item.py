@@ -23,4 +23,5 @@ class ItemRead(BaseModel):
     image_path: str | None
     price: float | None
     purchase_date: date | None
+    classification_confidence: float | None
     created_at: datetime

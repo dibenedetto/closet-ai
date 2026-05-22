@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { deleteItem, getItem, itemImageUrl, type Item } from '../api/items'
+import { deleteItem, getItem, itemImageUrl, reclassifyItem, type Item } from '../api/items'
+
+function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const pct = Math.round(confidence * 100)
+  const color = confidence >= 0.7 ? 'var(--ok)' : confidence >= 0.4 ? 'var(--accent)' : 'var(--danger)'
+  return (
+    <span title={`Confidenza classificazione: ${pct}%`} style={{ color, fontWeight: 600 }}>
+      {pct}%
+    </span>
+  )
+}
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -9,6 +19,7 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<Item | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [reclassifying, setReclassifying] = useState(false)
 
   const itemId = Number(id)
   const isValidId = Number.isInteger(itemId) && itemId > 0
@@ -36,6 +47,19 @@ export default function ItemDetailPage() {
     }
   }
 
+  async function onReclassify() {
+    if (!item || reclassifying) return
+    setReclassifying(true)
+    setError(null)
+    try {
+      setItem(await reclassifyItem(item.id))
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setReclassifying(false)
+    }
+  }
+
   if (error) {
     return (
       <p className="error">
@@ -58,8 +82,21 @@ export default function ItemDetailPage() {
         <h2 style={{ marginTop: 0 }}>{item.name}</h2>
         <div className="meta">
           <div className="kv"><span className="muted">ID</span><b>#{item.id}</b></div>
-          <div className="kv"><span className="muted">Categoria</span><b>{item.category ?? '—'}</b></div>
+          <div className="kv">
+            <span className="muted">Categoria</span>
+            <b>{item.category ?? '—'}</b>
+          </div>
           <div className="kv"><span className="muted">Colore</span><b>{item.color ?? '—'}</b></div>
+          <div className="kv">
+            <span className="muted">Confidenza classificatore</span>
+            <b>
+              {item.classification_confidence != null ? (
+                <ConfidenceBadge confidence={item.classification_confidence} />
+              ) : (
+                '—'
+              )}
+            </b>
+          </div>
           <div className="kv">
             <span className="muted">Prezzo</span>
             <b>{item.price != null ? `€ ${item.price.toFixed(2)}` : '—'}</b>
@@ -74,10 +111,18 @@ export default function ItemDetailPage() {
           </div>
         </div>
         <div className="actions">
-          <button className="danger" onClick={onDelete} disabled={deleting}>
+          <button onClick={onReclassify} disabled={reclassifying || deleting}>
+            {reclassifying ? 'Riclassifico…' : 'Riclassifica'}
+          </button>
+          <button className="danger" onClick={onDelete} disabled={deleting || reclassifying}>
             {deleting ? 'Elimino…' : 'Elimina'}
           </button>
-          <button type="button" className="ghost" onClick={() => navigate('/')} disabled={deleting}>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => navigate('/')}
+            disabled={deleting || reclassifying}
+          >
             Indietro
           </button>
         </div>

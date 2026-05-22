@@ -9,6 +9,8 @@ export interface Item {
   price: number | null
   /** Data acquisto in formato YYYY-MM-DD, oppure null */
   purchase_date: string | null
+  /** Confidenza softmax del classificatore (0–1), null se mock o assente */
+  classification_confidence: number | null
   /** Timestamp ISO-8601 di creazione (UTC) */
   created_at: string
 }
@@ -57,6 +59,12 @@ export async function createItem(input: CreateItemInput): Promise<Item> {
 export async function deleteItem(id: number): Promise<void> {
   const r = await fetch(`${API_BASE}/items/${id}`, { method: 'DELETE' })
   if (!r.ok) throw await asError(r)
+}
+
+export async function reclassifyItem(id: number): Promise<Item> {
+  return jsonOrThrow<Item>(
+    await fetch(`${API_BASE}/items/${id}/reclassify`, { method: 'POST' }),
+  )
 }
 
 export function itemImageUrl(id: number): string {
