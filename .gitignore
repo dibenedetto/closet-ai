@@ -259,7 +259,7 @@ frontend/coverage/
 
 # Presentazione: rigenerabile via script
 # Per committarla, rimuovi questa riga.
-docs/presentation.pptx
+# docs/presentation.pptx
 
 # OS
 .DS_Store
