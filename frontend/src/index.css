@@ -145,3 +145,46 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px
   border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600;
   margin-left: 8px;
 }
+
+.condition-badge {
+  display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 11px;
+  font-weight: 600; margin-left: 8px; border: 1px solid var(--border);
+}
+.condition-badge.nuovo       { background: rgba(78,201,160,0.15); color: var(--ok); border-color: var(--ok); }
+.condition-badge.buono       { background: rgba(124,156,255,0.15); color: var(--accent); border-color: var(--accent); }
+.condition-badge.usurato     { background: rgba(232,196,108,0.15); color: var(--warn); border-color: var(--warn); }
+.condition-badge.danneggiato { background: rgba(232,90,111,0.15); color: var(--danger); border-color: var(--danger); }
+.retired-badge {
+  display: inline-block; background: var(--panel-2); color: var(--muted);
+  border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+  margin-left: 8px; border: 1px solid var(--border);
+}
+
+.circular-card {
+  margin-top: 18px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.circular-card h3 { margin: 0 0 10px 0; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.suggestion-row {
+  display: flex; gap: 8px; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.suggestion-row:last-child { border-bottom: 0; }
+.suggestion-row .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.suggestion-row .info strong { text-transform: capitalize; }
+.suggestion-row .co2 { color: var(--ok); font-weight: 600; font-size: 12px; }
+
+.tutorial-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+  padding: 16px;
+}
+.tutorial-modal {
+  max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px;
+}
+.tutorial-modal h3 { margin-top: 0; }
+.tutorial-modal ul, .tutorial-modal ol { padding-left: 18px; }
+.tutorial-modal li { margin-bottom: 4px; }

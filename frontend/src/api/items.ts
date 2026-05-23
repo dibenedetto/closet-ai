@@ -1,5 +1,7 @@
 import { API_BASE, asError, jsonOrThrow } from './client'
 
+export type Condition = 'nuovo' | 'buono' | 'usurato' | 'danneggiato'
+
 export interface Item {
   id: number
   name: string
@@ -11,6 +13,10 @@ export interface Item {
   purchase_date: string | null
   /** Confidenza softmax del classificatore (0–1), null se mock o assente */
   classification_confidence: number | null
+  /** Condizione (`nuovo`/`buono`/`usurato`/`danneggiato`), null se mai diagnosticato */
+  condition: Condition | null
+  /** Quando il capo è stato ritirato dal guardaroba (donato/venduto/...). */
+  retired_at: string | null
   /** Timestamp ISO-8601 di creazione (UTC) */
   created_at: string
 }

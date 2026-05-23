@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Item
-from app.schemas import GhostItem, ItemStats, WardrobeStats
+from app.schemas import GhostItem, ImpactStats, ItemStats, WardrobeStats
 from app.services.stats import (
     DEFAULT_GHOST_AFTER_DAYS,
+    compute_impact_stats,
     compute_item_stats,
     compute_wardrobe_stats,
     list_ghost_items,
@@ -48,3 +49,10 @@ def get_ghost_items(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     return list_ghost_items(db, ghost_after_days=ghost_after_days)
+
+
+@router.get("/stats/impact", response_model=ImpactStats)
+def get_impact_stats(db: Session = Depends(get_db)) -> dict:
+    """Statistiche aggregate del modulo circolare: totale azioni eseguite,
+    kg CO₂ evitati, breakdown per tipo di azione, capi ritirati e riparati."""
+    return compute_impact_stats(db)

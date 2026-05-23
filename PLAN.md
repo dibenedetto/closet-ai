@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 4 — Outfit recommender (completata)
+**Fase**: 5 — Modulo circolare (completata)
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -20,6 +20,7 @@
 > 2.0 Fase 2 completata — Fashion-CLIP server-side, embedding 512d in ChromaDB, colore dominante con quantize + bg filter, endpoint `/reclassify`, UI con badge confidenza. 37 test verdi, benchmark e ADR in `docs/architecture.md`.
 > 3.0 Fase 3 completata — `WearEvent` con cascade delete, 6 endpoint REST (`wear`, `wears`, `batch`, `wear-events/{id}`, `items/{id}/stats`, `stats/wardrobe`, `stats/ghosts`), service `services/stats.py`, UI con quick-wear sulle card + storico nel detail + dashboard impatto. 51 test verdi (14 nuovi). PRAGMA `foreign_keys=ON` su SQLite.
 > 4.0 Fase 4 completata — recommender con generazione combinazioni (top/bottom/dress/outerwear/shoes), score colore (HSL) + meteo (Open-Meteo + fallback) + bonus capi fantasma. Endpoint `/outfits/suggest`, `/outfits/feedback` (CRUD), tabella `outfit_feedback`. Pagina `/today` "Cosa metto oggi?" con breakdown e like/dislike. 68 test verdi (17 nuovi).
+> 5.0 Fase 5 completata — `Item.condition` + `Item.retired_at` + tabella `item_actions`. Servizi `condition.py` (diagnosi heuristic), `circular.py` (tabella CO₂ × % evitamento), `repair_tutorials.py` (8 tutorial hardcoded). Endpoint `/items/{id}/diagnose`, `/condition`, `/items/{id}/actions` CRUD, `/stats/impact`, `/repair-tutorials`. UI: `<CircularSection>` su detail + Impact card + breakdown azioni in dashboard. Capi ritirati esclusi da ghost/wardrobe. 88 test verdi (20 nuovi).
 
 ---
 
@@ -130,13 +131,13 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
 ## Fase 5 — Modulo circolare (settimana 5)
 
-- [ ] Modello `ItemCondition`: stato capo (nuovo, buono, usurato, danneggiato)
-- [ ] Vision model per diagnosi difetti (può essere semplice classifier addestrato su poche classi)
-- [ ] Tabella `actions_suggested`: riparazione, swap, vendita, donazione, riciclo
-- [ ] Stima CO₂ evitata per categoria capo (tabella di riferimento da Ellen MacArthur)
-- [ ] Tutorial riparazione generati da LLM (chiamata a Claude API o modello locale)
-- [ ] UI: scheda "azioni circolari" per ogni capo
-- [ ] Eventuale integrazione con marketplace second-hand locali (mock o link esterni)
+- [x] Stato capo come colonna `Item.condition` (`nuovo`/`buono`/`usurato`/`danneggiato`) + auto-migration
+- [x] Diagnosi euristica `services/condition.py` basata su `wear_count` + età (vision classifier rimandato a Fase 6+)
+- [x] Tabella `item_actions` (riparazione/swap/vendita/donazione/riciclo) con cascade-delete
+- [x] Stima CO₂ in `services/circular.py` — tabella per categoria × % evitamento per azione (riparazione 70%, swap/vendita/donazione 100%, riciclo 30%)
+- [x] Tutorial riparazione in `services/repair_tutorials.py` — knowledge base hardcoded per 8 difetti, hook `llm_enrichment_available` per integrazione Claude API futura
+- [x] UI: componente `<CircularSection>` su detail capo (condition + suggerimenti + storico + modal tutorial)
+- [~] Marketplace second-hand: skip MVP (le azioni vengono solo registrate; in Fase 6 si aggiungono link esterni)
 
 ---
 

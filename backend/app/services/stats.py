@@ -7,7 +7,8 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Item, WearEvent
+from app.models import Item, ItemAction, WearEvent
+from app.services.circular import RETIRING_ACTIONS
 
 DEFAULT_GHOST_AFTER_DAYS = 30
 
@@ -64,8 +65,10 @@ def _ghost_eligible(item: Item, today: date, ghost_after_days: int) -> bool:
 def compute_wardrobe_stats(
     db: Session, *, ghost_after_days: int = DEFAULT_GHOST_AFTER_DAYS, top_n: int = 5
 ) -> dict:
-    """Calcola le statistiche aggregate sul guardaroba."""
-    total_items: int = db.execute(select(func.count(Item.id))).scalar_one() or 0
+    """Calcola le statistiche aggregate sul guardaroba (esclude capi ritirati)."""
+    total_items: int = db.execute(
+        select(func.count(Item.id)).where(Item.retired_at.is_(None))
+    ).scalar_one() or 0
     total_wears: int = db.execute(select(func.count(WearEvent.id))).scalar_one() or 0
     avg_wears_per_item = (total_wears / total_items) if total_items > 0 else 0.0
 
@@ -130,12 +133,12 @@ def list_ghost_items(
     today = _today()
     threshold = today - timedelta(days=ghost_after_days)
 
-    # Capi senza wear events (LEFT OUTER JOIN + filter)
+    # Capi senza wear events, non ritirati (LEFT OUTER JOIN + filter)
     rows = (
         db.execute(
             select(Item)
             .outerjoin(WearEvent, WearEvent.item_id == Item.id)
-            .where(WearEvent.id.is_(None))
+            .where(WearEvent.id.is_(None), Item.retired_at.is_(None))
             .order_by(Item.created_at.desc())
         )
         .scalars()
@@ -167,7 +170,7 @@ def _count_ghosts(db: Session, ghost_after_days: int) -> int:
         db.execute(
             select(Item.purchase_date, Item.created_at)
             .outerjoin(WearEvent, WearEvent.item_id == Item.id)
-            .where(WearEvent.id.is_(None))
+            .where(WearEvent.id.is_(None), Item.retired_at.is_(None))
         )
         .all()
     )
@@ -177,3 +180,38 @@ def _count_ghosts(db: Session, ghost_after_days: int) -> int:
         if ref is not None and ref <= threshold:
             count += 1
     return count
+
+
+def compute_impact_stats(db: Session) -> dict:
+    """Statistiche aggregate del modulo circolare (Fase 5)."""
+    actions = list(db.execute(select(ItemAction)).scalars())
+    total_actions = len(actions)
+    total_co2 = round(sum(a.co2_saved_kg for a in actions), 2)
+
+    actions_by_type: dict[str, int] = {}
+    co2_by_type: dict[str, float] = {}
+    for a in actions:
+        actions_by_type[a.action_type] = actions_by_type.get(a.action_type, 0) + 1
+        co2_by_type[a.action_type] = round(
+            co2_by_type.get(a.action_type, 0.0) + a.co2_saved_kg, 2
+        )
+
+    retired_count: int = db.execute(
+        select(func.count(Item.id)).where(Item.retired_at.is_not(None))
+    ).scalar_one() or 0
+
+    # Capi che hanno almeno un'azione di tipo "riparazione".
+    repaired_item_ids = {
+        a.item_id for a in actions if a.action_type == "riparazione"
+    }
+    # `RETIRING_ACTIONS` non viene usato qui ma esportato per chiarezza in docs.
+    _ = RETIRING_ACTIONS
+
+    return {
+        "total_actions": total_actions,
+        "total_co2_saved_kg": total_co2,
+        "actions_by_type": actions_by_type,
+        "co2_by_type": co2_by_type,
+        "retired_items_count": retired_count,
+        "repaired_items_count": len(repaired_item_ids),
+    }

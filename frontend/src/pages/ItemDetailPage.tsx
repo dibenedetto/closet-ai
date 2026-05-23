@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import CircularSection from '../components/CircularSection'
 import { deleteItem, getItem, itemImageUrl, reclassifyItem, type Item } from '../api/items'
 import { getItemStats, type ItemStats } from '../api/stats'
 import { deleteWear, listWears, logWear, type WearEvent } from '../api/wear'
@@ -137,7 +138,13 @@ export default function ItemDetailPage() {
         <div>
           <h2 style={{ marginTop: 0 }}>
             {item.name}
-            {stats?.is_ghost && <span className="ghost-badge">Capo fantasma</span>}
+            {item.condition && (
+              <span className={`condition-badge ${item.condition}`}>{item.condition}</span>
+            )}
+            {item.retired_at && <span className="retired-badge">ritirato</span>}
+            {stats?.is_ghost && !item.retired_at && (
+              <span className="ghost-badge">Capo fantasma</span>
+            )}
           </h2>
           <div className="meta">
             <div className="kv"><span className="muted">ID</span><b>#{item.id}</b></div>
@@ -224,6 +231,8 @@ export default function ItemDetailPage() {
           </ul>
         )}
       </div>
+
+      <CircularSection item={item} onItemRefresh={() => void refresh()} />
     </section>
   )
 }

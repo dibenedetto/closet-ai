@@ -52,6 +52,8 @@ def init_db() -> None:
 _ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
     "items": [
         ("classification_confidence", "FLOAT"),
+        ("condition", "VARCHAR(16)"),
+        ("retired_at", "DATETIME"),
     ],
 }
 

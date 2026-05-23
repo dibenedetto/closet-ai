@@ -28,6 +28,11 @@ class Item(Base):
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Condizione del capo: 'nuovo', 'buono', 'usurato', 'danneggiato'.
+    condition: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    # Quando un capo viene "ritirato" (donato/venduto/riciclato) cessa di
+    # essere disponibile per outfit e wear log. La riparazione NON lo ritira.
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
@@ -39,4 +44,10 @@ class Item(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="WearEvent.worn_on.desc()",
+    )
+    actions: Mapped[list["ItemAction"]] = relationship(  # noqa: F821
+        back_populates="item",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ItemAction.created_at.desc()",
     )

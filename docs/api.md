@@ -440,6 +440,120 @@ Lista cronologica (desc) dei feedback salvati. Query: `limit` (1–200, default 
 
 ---
 
+## Modulo circolare (Fase 5)
+
+### `POST /items/{item_id}/diagnose`
+
+Esegue la diagnosi euristica della condizione del capo (`nuovo`/`buono`/
+`usurato`/`danneggiato`) basandosi su `wear_count` + età. Se l'item non aveva
+ancora una `condition`, viene persistita. Restituisce anche la lista di
+azioni circolari suggerite con stima CO₂ evitata.
+
+**Risposta `200`** — `DiagnoseResponse`:
+
+```json
+{
+  "item_id": 12,
+  "condition": "usurato",
+  "wear_count": 42,
+  "days_owned": 540,
+  "rationale": "42 utilizzi su 540 giorni: segni d'uso attesi",
+  "suggestions": [
+    {
+      "action_type": "riparazione",
+      "co2_saved_kg": 22.4,
+      "rationale": "alcune riparazioni mirate possono prolungarne la vita",
+      "priority": 1
+    },
+    { "action_type": "donazione", "co2_saved_kg": 32.0, "rationale": "…", "priority": 2 }
+  ]
+}
+```
+
+---
+
+### `PUT /items/{item_id}/condition`
+
+Override manuale della condizione. Body: `{"condition": "danneggiato"}`.
+Risposta `200`: stesso shape di `/diagnose`.
+
+---
+
+### `POST /items/{item_id}/actions`
+
+Registra l'esecuzione di un'azione circolare. Body:
+
+```json
+{ "action_type": "donazione", "notes": "consegnata a Caritas", "co2_saved_kg": null }
+```
+
+Se `co2_saved_kg` è `null`, il backend la stima dalla tabella interna
+(categoria × percentuale d'azione). Le azioni **di ritiro** (donazione,
+swap, vendita, riciclo) marcano il capo con `retired_at = now`; la
+**riparazione** non lo ritira.
+
+**Risposta `201`** — `ItemAction`.
+
+---
+
+### `GET /items/{item_id}/actions` · `DELETE /actions/{action_id}`
+
+Lista cronologica desc + delete singola. Eliminando un'azione di ritiro
+quando non ce ne sono altre sullo stesso capo, il capo viene **riattivato**
+(`retired_at = NULL`).
+
+---
+
+### `GET /stats/impact`
+
+Statistiche aggregate del modulo circolare.
+
+**Risposta `200`** — `ImpactStats`:
+
+```json
+{
+  "total_actions": 7,
+  "total_co2_saved_kg": 84.5,
+  "actions_by_type": { "riparazione": 3, "donazione": 2, "riciclo": 2 },
+  "co2_by_type": { "riparazione": 33.6, "donazione": 39.0, "riciclo": 11.9 },
+  "retired_items_count": 4,
+  "repaired_items_count": 2
+}
+```
+
+---
+
+### `GET /repair-tutorials/defects` · `GET /repair-tutorials`
+
+Knowledge base di tutorial di riparazione per difetti comuni (strappo,
+macchia, cucitura, bottone, elastico, zip, buco, scolorimento).
+
+```bash
+curl -s "http://localhost:8000/api/v1/repair-tutorials/defects" | jq .
+curl -s "http://localhost:8000/api/v1/repair-tutorials?defect=zip&category=giacca" | jq .
+```
+
+**Risposta `200`** — `RepairTutorial`:
+
+```json
+{
+  "defect": "zip",
+  "category": "giacca",
+  "title": "Sbloccare o sostituire una zip",
+  "difficulty": "media",
+  "time_minutes": 25,
+  "materials": ["matita HB (grafite) o sapone", "pinze", "..."],
+  "steps": ["...", "..."],
+  "source": "hardcoded",
+  "llm_enrichment_available": false
+}
+```
+
+`llm_enrichment_available` è `true` se l'env `CLOSETAI_ANTHROPIC_API_KEY`
+è impostata (placeholder per arricchimento via Claude API in futuro).
+
+---
+
 ## Schemi
 
 ### `Item`
@@ -454,6 +568,8 @@ interface Item {
   price: number | null
   purchase_date: string | null           // "YYYY-MM-DD"
   classification_confidence: number | null  // 0–1, null per mock o se ignota
+  condition: 'nuovo' | 'buono' | 'usurato' | 'danneggiato' | null
+  retired_at: string | null              // ISO-8601 UTC quando ritirato
   created_at: string                     // ISO-8601 UTC
 }
 ```
@@ -507,6 +623,30 @@ interface OutfitFeedback {
   rating: 1 | -1
   occasion: string | null
   created_at: string
+}
+```
+
+### `ItemAction` / `ImpactStats`
+
+```ts
+type ActionType = 'riparazione' | 'swap' | 'vendita' | 'donazione' | 'riciclo'
+
+interface ItemAction {
+  id: number
+  item_id: number
+  action_type: ActionType
+  notes: string | null
+  co2_saved_kg: number
+  created_at: string
+}
+
+interface ImpactStats {
+  total_actions: number
+  total_co2_saved_kg: number
+  actions_by_type: Record<ActionType, number>
+  co2_by_type: Record<ActionType, number>
+  retired_items_count: number
+  repaired_items_count: number
 }
 ```
 
@@ -580,6 +720,7 @@ effettivi del frontend.
 | `CLOSETAI_CLASSIFIER`    | `fashion-clip`                       | `mock` per fallback / test; `fashion-clip` per ML.   |
 | `CLOSETAI_DEFAULT_LAT`   | `43.7228` (Pisa)                     | latitudine di default per `/outfits/suggest`.        |
 | `CLOSETAI_DEFAULT_LON`   | `10.4017` (Pisa)                     | longitudine di default per `/outfits/suggest`.       |
+| `CLOSETAI_ANTHROPIC_API_KEY` | _(non set)_                      | abilita il flag `llm_enrichment_available` sui tutorial (placeholder Fase 6). |
 
 I test impostano questi automaticamente su una tempdir isolata e forzano
 `CLOSETAI_CLASSIFIER=mock` (vedi `backend/tests/conftest.py`).

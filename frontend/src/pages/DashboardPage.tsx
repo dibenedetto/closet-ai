@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { getImpactStats, type ImpactStats } from '../api/circular'
 import {
   getGhostItems,
   getWardrobeStats,
@@ -29,6 +30,7 @@ function StatCard({
 export default function DashboardPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null)
   const [ghosts, setGhosts] = useState<GhostItem[]>([])
+  const [impact, setImpact] = useState<ImpactStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ghostDays, setGhostDays] = useState(30)
 
@@ -38,11 +40,13 @@ export default function DashboardPage() {
     Promise.all([
       getWardrobeStats({ ghostAfterDays: ghostDays, topN: 5 }),
       getGhostItems({ ghostAfterDays: ghostDays }),
+      getImpactStats(),
     ])
-      .then(([s, g]) => {
+      .then(([s, g, i]) => {
         if (!cancelled) {
           setStats(s)
           setGhosts(g)
+          setImpact(i)
         }
       })
       .catch((e: unknown) => {
@@ -106,7 +110,46 @@ export default function DashboardPage() {
           value={stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'}
           sub="sui capi con prezzo e ≥ 1 utilizzo"
         />
+        {impact && (
+          <>
+            <StatCard
+              label="CO₂ evitata"
+              value={`${impact.total_co2_saved_kg.toFixed(1)} kg`}
+              sub={`${impact.total_actions} azioni circolari`}
+            />
+            <StatCard
+              label="Capi salvati"
+              value={String(impact.repaired_items_count + impact.retired_items_count)}
+              sub={`${impact.repaired_items_count} riparati · ${impact.retired_items_count} ritirati`}
+            />
+          </>
+        )}
       </div>
+
+      {impact && impact.total_actions > 0 && (
+        <section className="panel" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Azioni circolari per tipo</h3>
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+            {Object.entries(impact.actions_by_type).map(([type, count]) => (
+              <div
+                key={type}
+                style={{
+                  padding: 10,
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  background: 'var(--panel-2)',
+                }}
+              >
+                <div className="muted" style={{ fontSize: 11, textTransform: 'capitalize' }}>{type}</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{count}</div>
+                <div className="muted" style={{ fontSize: 11 }}>
+                  −{(impact.co2_by_type[type] ?? 0).toFixed(1)} kg CO₂
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
         <section className="panel">
