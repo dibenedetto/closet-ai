@@ -34,6 +34,21 @@ CORS_ORIGINS: list[str] = [
 DEFAULT_LAT: float = float(os.environ.get("CLOSETAI_DEFAULT_LAT", "43.7228"))
 DEFAULT_LON: float = float(os.environ.get("CLOSETAI_DEFAULT_LON", "10.4017"))
 
+# AI generativa via litellm: supporta provider cloud (Anthropic, OpenAI) e
+# locali (Ollama, vLLM, HF Inference). Vedi ADR-008 in docs/architecture.md.
+LLM_MODEL: str = os.environ.get("CLOSETAI_LLM_MODEL", "claude-haiku-4-5")
+LLM_TIMEOUT: float = float(os.environ.get("CLOSETAI_LLM_TIMEOUT", "20"))
+LLM_MAX_TOKENS: int = int(os.environ.get("CLOSETAI_LLM_MAX_TOKENS", "800"))
+LLM_CACHE_TTL_HOURS: int = int(os.environ.get("CLOSETAI_LLM_CACHE_TTL_HOURS", "24"))
+
+# Try-on virtuale via diffusers: backend "diffusers" (locale) o "disabled".
+# Default disabled per non scaricare ~5GB di pesi senza richiesta esplicita.
+TRYON_BACKEND: str = os.environ.get("CLOSETAI_TRYON_BACKEND", "disabled")
+TRYON_MODEL: str = os.environ.get(
+    "CLOSETAI_TRYON_MODEL", "stabilityai/stable-diffusion-2-inpainting"
+)
+TRYON_DIR: Path = Path(os.environ.get("CLOSETAI_TRYON_DIR", DATA_DIR / "tryon"))
+
 # Vincoli upload immagini
 MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
 ALLOWED_IMAGE_CONTENT_TYPES: frozenset[str] = frozenset(
@@ -49,3 +64,4 @@ def ensure_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     CHROMA_DIR.mkdir(parents=True, exist_ok=True)
+    TRYON_DIR.mkdir(parents=True, exist_ok=True)

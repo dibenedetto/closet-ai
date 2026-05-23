@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 6 — Polish e demo (completata) · **MVP CHIUSO**
+**Fase**: 6.1 — AI generativa attivata · **MVP CHIUSO**
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -22,6 +22,7 @@
 > 4.0 Fase 4 completata — recommender con generazione combinazioni (top/bottom/dress/outerwear/shoes), score colore (HSL) + meteo (Open-Meteo + fallback) + bonus capi fantasma. Endpoint `/outfits/suggest`, `/outfits/feedback` (CRUD), tabella `outfit_feedback`. Pagina `/today` "Cosa metto oggi?" con breakdown e like/dislike. 68 test verdi (17 nuovi).
 > 5.0 Fase 5 completata — `Item.condition` + `Item.retired_at` + tabella `item_actions`. Servizi `condition.py` (diagnosi heuristic), `circular.py` (tabella CO₂ × % evitamento), `repair_tutorials.py` (8 tutorial hardcoded). Endpoint `/items/{id}/diagnose`, `/condition`, `/items/{id}/actions` CRUD, `/stats/impact`, `/repair-tutorials`. UI: `<CircularSection>` su detail + Impact card + breakdown azioni in dashboard. Capi ritirati esclusi da ghost/wardrobe. 88 test verdi (20 nuovi).
 > 6.0 Fase 6 completata — **MVP CHIUSO**. Polish UI (skeleton loaders, transitions, mobile responsive, hero banner + filtri sulla home), dashboard impatto con equivalenze CO₂ tangibili e bar chart CSS, pagina `/mirror` kiosk per RPi + script kiosk Chromium, ADR-007 per try-on diffusion (rimandato), seed demo (`seed_demo.py`), `docs/demo-script.md`, `docs/handover.md`. 88 test ancora verdi, build 318 kB (100 kB gzip).
+> 6.1 AI generativa attivata — **4 feature reali** che esercitano LLM/diffusion in runtime: (1) **descrizione capi** via LLM su `POST /items/{id}/describe`, (2) **coach sostenibilità** su `GET /stats/coach`, (3) **tutorial dinamici** su `GET /repair-tutorials/enrich`, (4) **try-on virtuale** via Stable Diffusion inpainting su `POST /items/{id}/try-on`. Astrazione **litellm** (Anthropic / OpenAI / Ollama / HF locale) + ADR-008. Cache DB delle risposte LLM (TTL 24h). UI: `<AiDescription>`, `<CoachCard>`, `<TryOnPanel>`, bottone "Arricchisci con AI" nei tutorial. 106 test verdi (+18 nuovi). Build 325 kB (102 kB gzip).
 
 ---
 
@@ -147,7 +148,7 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 - [x] UI/UX rifinita — tipografia, transitions, skeleton loaders, mobile responsive, palette coerente, hero banner sulla home con stats + filtri (ricerca/categoria/stato)
 - [x] Dashboard impatto sostenibilità — sezione "🌱 Sostenibilità in pratica" con equivalenze tangibili (km auto, voli, m² foresta), bar chart CSS per breakdown azioni
 - [x] Prototipo specchio Raspberry Pi — pagina `/mirror` kiosk-friendly + `scripts/start-mirror.sh` + `docs/raspberry-pi.md` (skeleton, non validato su HW)
-- [~] Try-on virtuale — rimandato post-corso (ADR-007 in `architecture.md`: costo modello + privacy)
+- [x] Try-on virtuale — implementato con backend pluggable (`DiffusersLocalBackend` + Stable Diffusion 2 inpainting, default `disabled`; vedi ADR-007 aggiornato)
 - [x] Demo finale — `docs/demo-script.md` con scaletta 8-10 min + `backend/scripts/seed_demo.py` (12 capi, 158 wear, 2 azioni circolari)
 - [x] Documentazione completa per consegna — `docs/handover.md` con stato finale, futures, decisioni; doc completa anche su API, architettura, RPi
 

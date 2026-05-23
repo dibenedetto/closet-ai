@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { Condition, Item } from '../api/items'
+import { getEnrichedTutorial } from '../api/ai'
 import {
   deleteAction,
   diagnoseItem,
@@ -27,15 +28,23 @@ function fmtDate(iso: string): string {
 
 function TutorialModal({
   tutorial,
+  onEnrich,
+  enriching,
   onClose,
 }: {
   tutorial: RepairTutorial
+  onEnrich: () => void
+  enriching: boolean
   onClose: () => void
 }) {
+  const isLlm = tutorial.source === 'llm'
   return (
     <div className="tutorial-modal-backdrop" onClick={onClose}>
       <div className="tutorial-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{tutorial.title}</h3>
+        <h3>
+          {tutorial.title}
+          {isLlm && <span className="ai-label" style={{ marginLeft: 8 }}>✨ AI</span>}
+        </h3>
         <p className="muted" style={{ marginTop: 0 }}>
           Difficoltà: <b>{tutorial.difficulty}</b> ·
           tempo stimato: <b>{tutorial.time_minutes} min</b>
@@ -57,11 +66,17 @@ function TutorialModal({
 
         <p className="muted" style={{ fontSize: 11 }}>
           Sorgente: {tutorial.source}
-          {tutorial.llm_enrichment_available && ' · LLM enrichment disponibile'}
         </p>
 
-        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={onClose}>Chiudi</button>
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          {tutorial.llm_enrichment_available && !isLlm && (
+            <button onClick={onEnrich} disabled={enriching}>
+              {enriching ? 'Arricchisco con AI…' : '✨ Arricchisci con AI'}
+            </button>
+          )}
+          <button className="ghost" onClick={onClose} style={{ marginLeft: 'auto' }}>
+            Chiudi
+          </button>
         </div>
       </div>
     </div>
@@ -80,6 +95,7 @@ export default function CircularSection({
   const [defects, setDefects] = useState<string[]>([])
   const [selectedDefect, setSelectedDefect] = useState<string>('')
   const [tutorial, setTutorial] = useState<RepairTutorial | null>(null)
+  const [enriching, setEnriching] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -168,6 +184,23 @@ export default function CircularSection({
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function onEnrichTutorial() {
+    if (!tutorial || enriching) return
+    setEnriching(true)
+    try {
+      const enriched = await getEnrichedTutorial(tutorial.defect, {
+        category: item.category ?? undefined,
+        color: item.color ?? undefined,
+        condition: item.condition ?? undefined,
+      })
+      setTutorial(enriched)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnriching(false)
     }
   }
 
@@ -295,7 +328,14 @@ export default function CircularSection({
         </button>
       </div>
 
-      {tutorial && <TutorialModal tutorial={tutorial} onClose={() => setTutorial(null)} />}
+      {tutorial && (
+        <TutorialModal
+          tutorial={tutorial}
+          onEnrich={() => void onEnrichTutorial()}
+          enriching={enriching}
+          onClose={() => setTutorial(null)}
+        />
+      )}
     </div>
   )
 }

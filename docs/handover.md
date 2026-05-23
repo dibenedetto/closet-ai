@@ -33,9 +33,16 @@
 | `DELETE /api/v1/actions/{id}`             | rimuove azione (riattiva il capo se necessario)   |
 | `GET /api/v1/repair-tutorials[/defects]`  | tutorial riparazione (KB hardcoded)               |
 
+| `GET /api/v1/llm/status` · `/tryon/status` | introspection per UI            |
+| `POST /api/v1/items/{id}/describe`        | descrizione capo via LLM          |
+| `GET /api/v1/stats/coach`                 | coach sostenibilità via LLM       |
+| `GET /api/v1/repair-tutorials/enrich`     | tutorial via LLM (con fallback)   |
+| `POST /api/v1/items/{id}/try-on`          | try-on virtuale via diffusion     |
+| `GET /api/v1/items/{id}/try-on/{file}`    | serve immagine try-on generata    |
+
 Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
-### Machine Learning
+### Machine Learning (applicato)
 
 - **Fashion-CLIP** (`patrickjohncyh/fashion-clip`) integrato server-side
   con fallback su mock zero-shot via env var.
@@ -43,6 +50,25 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 - Estrazione colore dominante con quantize + filtro sfondo chiaro.
 - Diagnosi condizione capo via euristica `wear_count + età`.
 - Tabella CO₂ × % evitamento per stima dell'impatto circolare.
+
+### AI generativa (attivata in Fase 6.1)
+
+- **Gateway litellm** (`services/llm.py`): unico punto di chiamata
+  multi-provider (Anthropic, OpenAI, Ollama locale, vLLM, HF Inference).
+  Configurabile via `CLOSETAI_LLM_MODEL`.
+- **Descrizione capi** (`services/descriptions.py`): genera 1-2 frasi
+  italiane per ogni capo, salvate su `Item.description`.
+- **Coach sostenibilità** (`services/coach.py`): consiglio personalizzato
+  dalla dashboard, basato su stats + capi fantasma.
+- **Tutorial riparazione** (`services/repair_tutorials.py`): KB hardcoded
+  + funzione `enrich_with_llm()` per personalizzazione su categoria/colore/
+  condizione del capo.
+- **Try-on virtuale** (`services/tryon.py`): backend astratto, default
+  `disabled`; `DiffusersLocalBackend` esegue Stable Diffusion 2 inpainting
+  locale con maschera torso euristica.
+- **Cache risposte** (`models/llm_cache.py`): tabella con TTL 24h.
+- Tutti i path hanno **graceful fallback**: se il provider non è
+  configurato, l'endpoint risponde 503 e il frontend nasconde i bottoni AI.
 
 ### Frontend (React 19 + Vite 7 + TypeScript)
 
@@ -81,6 +107,9 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 - [docs/demo-script.md](demo-script.md) — scaletta operativa demo finale.
 - [docs/screenshots/README.md](screenshots/README.md) — come catturare gli
   screenshot (manuale).
+- [docs/presentation.pptx](presentation.pptx) — slide consegna (23 slide,
+  italiano). Rigenerabile via
+  `backend/scripts/generate_presentation.py`.
 
 ### Tooling
 
@@ -100,14 +129,13 @@ Funzionalità predisposte ma non al 100% per la produzione reale:
    PNG vanno catturati a mano una volta avviato il sistema.
 2. **Specchio Raspberry Pi** — la pagina `/mirror` funziona, lo script
    kiosk c'è, ma non è stato validato su hardware fisico.
-3. **Tutorial via LLM** — il flag `llm_enrichment_available` si attiva con
-   `CLOSETAI_ANTHROPIC_API_KEY`, ma la chiamata vera a Claude API non è
-   implementata: oggi è una KB hardcoded (8 difetti).
-4. **Try-on virtuale (IDM-VTON)** — solo ADR-007 in `architecture.md`,
-   nessuna implementazione (costo modello + esperienza utente complessa).
-5. **Auth** — single-user locale (decisione consapevole, vedi PLAN
+3. **Try-on garment-aware (IDM-VTON)** — l'attuale backend usa Stable
+   Diffusion inpainting con maschera torso euristica: visivamente
+   convincente per la demo ma non è un vero try-on garment-aware.
+   IDM-VTON è elencato come path di sblocco in ADR-007.
+4. **Auth** — single-user locale (decisione consapevole, vedi PLAN
    "Decisioni aperte").
-6. **Marketplace integration** — i suggerimenti di "vendita" oggi non
+5. **Marketplace integration** — i suggerimenti di "vendita" oggi non
    linkano a Vinted/Wallapop. Aggiunta lineare in Fase 7+.
 
 ---
@@ -142,7 +170,8 @@ considerate.
 | ADR-004 | Embedding storage        | ChromaDB persistente locale                               |
 | ADR-005 | Inference                | Server-side oggi; ONNX/on-device come estensione          |
 | ADR-006 | Colore dominante         | Pillow quantize + filtro sfondo chiaro                    |
-| ADR-007 | Try-on diffusion         | Rimandato (costo + esperienza)                            |
+| ADR-007 | Try-on diffusion         | Backend pluggable (DiffusersLocalBackend, default disabled) |
+| ADR-008 | LLM gateway              | litellm (Anthropic / OpenAI / Ollama / HF) + DB cache 24h |
 
 ---
 

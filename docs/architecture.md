@@ -147,40 +147,112 @@ i rimanenti. Mappiamo poi sul nome più vicino della palette
 
 ---
 
-## ADR-007 — Try-on virtuale (diffusion): rimandato
+## ADR-007 — Try-on virtuale (diffusion): backend pluggable, default disabled
 
-**Contesto**: il PLAN Fase 6 elenca il *try-on virtuale* (es. IDM-VTON,
-StreetTryOn) fra le estensioni opzionali. Si tratta di sintetizzare un
+**Contesto**: il PROJECT.md §4.2 elenca il *try-on virtuale* (es. IDM-VTON,
+StreetTryOn) come ruolo di AI generativa. Si tratta di sintetizzare un
 ritratto dell'utente che indossa virtualmente un capo del guardaroba,
 usando un modello di diffusion image-to-image.
 
-**Decisione**: **rimandato a post-corso**. La Fase 6 non lo include nel
-prototipo consegnato.
+**Decisione**: **implementato con backend pluggable**, default `disabled`.
+L'opt-in esplicito (`CLOSETAI_TRYON_BACKEND=diffusers`) scarica al primo
+uso ~5 GB di pesi (default `stabilityai/stable-diffusion-2-inpainting`) e
+genera in locale.
 
-**Motivazione**:
+**Architettura**:
 
-- I pesi di IDM-VTON sono ~5 GB. Costo di download/storage non
-  giustificabile per una demo studentesca.
-- L'inferenza richiede una GPU con almeno 12 GB di VRAM per essere
-  utilizzabile; su CPU una singola immagine impiega minuti, non secondi.
-- La pipeline UX (caricamento ritratto dell'utente, allineamento pose,
-  masking) introduce molta complessità extra fuori dal core "wardrobe +
-  sostenibilità".
-- Privacy: il try-on richiede di salvare immagini del **corpo** dell'utente.
-  Confligge con il principio "privacy by design" dell'MVP (ADR
-  implicito su [PROJECT.md](../PROJECT.md) §5.3).
+```
+backend/app/services/tryon.py
+├─ TryOnBackend (ABC)
+│   ├─ DisabledBackend  ← default, risponde 503
+│   └─ DiffusersLocalBackend  ← Stable Diffusion 2 inpainting via diffusers
+│       └─ (futuro) HuggingFaceInferenceBackend, ReplicateBackend, …
+```
 
-**Path di sblocco se servisse**:
+Pipeline MVP (non IDM-VTON garment-aware):
 
-1. Aggiungere `services/tryon.py` con interfaccia
-   `try_on(garment_path, user_photo) -> generated_image_path`.
-2. Esporre `POST /items/{id}/try-on` con upload del ritratto.
-3. Mostrare risultato in modale sulla pagina `/items/{id}`.
-4. Salvataggio risultati: **out-of-DB**, in `data/tryon/` con TTL breve.
+1. Ricezione ritratto utente via `POST /items/{id}/try-on` multipart.
+2. Resize/pad a 512×512 (tarato per SD2 inpainting).
+3. Generazione automatica di una maschera "torso" (rettangolo centrale
+   euristico, dal 30% al 75% dell'altezza, 15%-85% larghezza).
+4. Stable Diffusion **inpainting** con prompt `"a photorealistic portrait
+   of a person wearing a {color} {category}…"`.
+5. Output salvato in `data/tryon/{uuid}.png` (TTL gestito esternamente).
+
+**Motivazione del compromesso**:
+
+- L'inferenza richiede 30s-3min su CPU, pochi secondi su GPU CUDA. Il
+  default `disabled` evita download involontari.
+- La maschera del torso *automatica* dà un risultato approssimativo ma è
+  sufficiente per la demo. Per qualità garment-aware servirebbe IDM-VTON
+  o OutfitAnyone (10+ GB) con segmentazione pose-aware.
+- Privacy: i ritratti dell'utente **non** vengono salvati su disco; solo
+  l'output generato (che è una sintesi, non il volto originale) viene
+  scritto in `data/tryon/`.
+
+**Path di sblocco per IDM-VTON**:
+
+1. Implementare `IdmVtonBackend(TryOnBackend)` che usa il modello vero
+   con segmentazione automatica.
+2. Cambiare default a `CLOSETAI_TRYON_BACKEND=idm-vton`.
+3. Nessuna modifica di interfaccia per il chiamante: `run_tryon()` resta
+   identico, l'endpoint resta identico.
+
+---
+
+## ADR-008 — LLM gateway via litellm (cloud + locale pluggable)
+
+**Contesto**: il PROJECT.md §4.2 elenca tre ruoli di AI generativa testuale:
+
+- **Tutorial di riparazione** dinamici.
+- **Descrizione narrativa** dei capi.
+- **Coach sostenibilità** sulla dashboard.
+
+Avremmo potuto integrare direttamente l'SDK Anthropic, ma questo avrebbe
+fatto del "vendor lock-in" su un singolo provider. L'utente può preferire
+modelli locali per ragioni di privacy/costo (Ollama su laptop, vLLM su
+server interno, llama.cpp).
+
+**Decisione**: usiamo **litellm** come abstraction layer unificato.
+Sono compatibili out-of-the-box:
+
+| Modello configurato                  | Provider              | Credenziali           |
+| ------------------------------------ | --------------------- | --------------------- |
+| `claude-haiku-4-5` (default)         | Anthropic API         | `ANTHROPIC_API_KEY`   |
+| `claude-sonnet-4-6`                  | Anthropic API         | `ANTHROPIC_API_KEY`   |
+| `openai/gpt-4o-mini`                 | OpenAI API            | `OPENAI_API_KEY`      |
+| `ollama/llama3.2:3b`                 | Ollama locale         | nessuna (daemon up)   |
+| `huggingface/Qwen/Qwen2.5-7B-Instruct` | HF Inference        | `HF_TOKEN`            |
+
+La scelta è guidata da `CLOSETAI_LLM_MODEL`. Cambiare provider richiede
+un solo env var, nessun cambio di codice.
+
+**Servizi che lo usano**:
+
+- `app/services/repair_tutorials.py::enrich_with_llm()` —
+  `GET /api/v1/repair-tutorials/enrich?defect=…` produce tutorial JSON
+  strutturati. Fallback alla KB hardcoded se l'LLM non risponde.
+- `app/services/descriptions.py::generate_item_description()` —
+  `POST /api/v1/items/{id}/describe`, salva su `Item.description`.
+- `app/services/coach.py::generate_coach_message()` —
+  `GET /api/v1/stats/coach`, restituisce consiglio basato su
+  `WardrobeStats + ImpactStats + ghosts top 3`.
+
+**Caching**: tabella `llm_cache` con TTL (default 24h, configurabile via
+`CLOSETAI_LLM_CACHE_TTL_HOURS`). Lo stesso prompt non viene rigenerato.
+
+**Graceful fallback**: se la chiamata fallisce (no credenziali, network
+down, modello locale non servito), `llm.generate()` ritorna `None`. I
+chiamanti decidono il fallback caso per caso (canned message, KB
+hardcoded, 503 al client).
 
 ---
 
 ## Layout dei moduli ML
+
+---
+
+## Layout dei moduli ML / AI
 
 ```
 backend/app/
@@ -189,7 +261,12 @@ backend/app/
 │   ├── color.py            # estrazione colore dominante (PIL quantize)
 │   └── (futuro: defects.py, recommender.py, ...)
 └── services/
-    └── embeddings.py       # wrapper ChromaDB (collection "items")
+    ├── embeddings.py       # wrapper ChromaDB (collection "items")
+    ├── llm.py              # gateway litellm + DB cache
+    ├── descriptions.py     # item description via LLM
+    ├── coach.py            # coach sostenibilità via LLM
+    ├── repair_tutorials.py # KB hardcoded + enrich_with_llm()
+    └── tryon.py            # backend astratto + DiffusersLocalBackend
 ```
 
 L'interfaccia condivisa è la dataclass `ClassificationResult`:
@@ -207,13 +284,23 @@ class ClassificationResult:
 
 ## Variabili d'ambiente rilevanti
 
-| variabile                | default                              | scope     | note                                                       |
-| ------------------------ | ------------------------------------ | --------- | ---------------------------------------------------------- |
-| `CLOSETAI_CLASSIFIER`    | `fashion-clip`                       | runtime   | `mock` per i test e fallback senza torch.                  |
-| `CLOSETAI_DATA_DIR`      | `<repo>/data`                        | runtime   | root storage; ChromaDB sotto `<DATA_DIR>/chroma/`.         |
-| `CLOSETAI_DB_PATH`       | `<DATA_DIR>/closetai.db`             | runtime   | SQLite path.                                               |
-| `CLOSETAI_DATABASE_URL`  | derivata da `DB_PATH`                | runtime   | DSN SQLAlchemy completo (override totale).                 |
-| `HF_HOME`                | `~/.cache/huggingface`               | esterno   | cache pesi HuggingFace; ridirigibile su disco esterno.     |
+| variabile                       | default                              | scope     | note                                                       |
+| ------------------------------- | ------------------------------------ | --------- | ---------------------------------------------------------- |
+| `CLOSETAI_CLASSIFIER`           | `fashion-clip`                       | runtime   | `mock` per i test e fallback senza torch.                  |
+| `CLOSETAI_DATA_DIR`             | `<repo>/data`                        | runtime   | root storage; ChromaDB sotto `<DATA_DIR>/chroma/`.         |
+| `CLOSETAI_DB_PATH`              | `<DATA_DIR>/closetai.db`             | runtime   | SQLite path.                                               |
+| `CLOSETAI_DATABASE_URL`         | derivata da `DB_PATH`                | runtime   | DSN SQLAlchemy completo (override totale).                 |
+| `CLOSETAI_LLM_MODEL`            | `claude-haiku-4-5`                   | runtime   | nome modello litellm (es. `ollama/llama3.2`, `openai/gpt-4o-mini`). |
+| `CLOSETAI_LLM_TIMEOUT`          | `20` (sec)                           | runtime   | timeout chiamate LLM.                                      |
+| `CLOSETAI_LLM_MAX_TOKENS`       | `800`                                | runtime   | tetto generazione.                                         |
+| `CLOSETAI_LLM_CACHE_TTL_HOURS`  | `24`                                 | runtime   | TTL della tabella `llm_cache`.                             |
+| `CLOSETAI_TRYON_BACKEND`        | `disabled`                           | runtime   | `diffusers` per try-on locale.                             |
+| `CLOSETAI_TRYON_MODEL`          | `stabilityai/stable-diffusion-2-inpainting` | runtime | HF model id per try-on.                            |
+| `CLOSETAI_TRYON_DIR`            | `<DATA_DIR>/tryon`                   | runtime   | output try-on.                                             |
+| `ANTHROPIC_API_KEY`             | _(non set)_                          | esterno   | richiesta dai modelli Claude.                              |
+| `OPENAI_API_KEY`                | _(non set)_                          | esterno   | richiesta dai modelli OpenAI.                              |
+| `OLLAMA_API_BASE`               | `http://localhost:11434`             | esterno   | endpoint Ollama locale.                                    |
+| `HF_HOME`                       | `~/.cache/huggingface`               | esterno   | cache pesi HuggingFace; ridirigibile su disco esterno.     |
 
 ---
 

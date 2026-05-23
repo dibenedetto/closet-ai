@@ -549,8 +549,124 @@ curl -s "http://localhost:8000/api/v1/repair-tutorials?defect=zip&category=giacc
 }
 ```
 
-`llm_enrichment_available` è `true` se l'env `CLOSETAI_ANTHROPIC_API_KEY`
-è impostata (placeholder per arricchimento via Claude API in futuro).
+`llm_enrichment_available` è `true` se un LLM è configurato (qualsiasi
+provider supportato da litellm — vedi sezione "AI generativa").
+
+---
+
+## AI generativa (LLM + try-on)
+
+Endpoint che usano un LLM (litellm) o un modello diffusion (diffusers).
+Tutti restituiscono **503** se il backend non è configurato; il frontend
+si nasconde i bottoni quando `GET /llm/status` riporta `configured: false`.
+
+Vedi ADR-007 (try-on) e ADR-008 (LLM gateway) in
+[architecture.md](architecture.md).
+
+### `GET /llm/status` · `GET /tryon/status`
+
+Introspection per il frontend.
+
+```json
+// GET /api/v1/llm/status
+{ "configured": true, "model": "claude-haiku-4-5", "tryon_backend": "disabled" }
+
+// GET /api/v1/tryon/status
+{ "backend": "disabled", "available": false, "model": null }
+```
+
+---
+
+### `POST /items/{item_id}/describe`
+
+Genera una descrizione narrativa breve (1-2 frasi) via LLM. La descrizione
+viene salvata su `Item.description`.
+
+**Query**
+
+| nome         | tipo  | default | descrizione                                       |
+| ------------ | ----- | ------- | ------------------------------------------------- |
+| `regenerate` | bool  | `false` | rigenera anche se già presente                    |
+
+**Risposta `200`** — `ItemDescriptionOut`:
+
+```json
+{
+  "item_id": 12,
+  "description": "T-shirt bordeaux versatile, ideale per outfit casual.",
+  "generated": true,
+  "model": "claude-haiku-4-5"
+}
+```
+
+**Risposta `503`** — nessun LLM configurato.
+
+---
+
+### `GET /stats/coach`
+
+Messaggio personalizzato del "coach AI sostenibilità", basato su
+`WardrobeStats + ImpactStats + ghost items top 3`. Output cached 24h.
+
+**Query**: `ghost_after_days` (default 30).
+
+**Risposta `200`** — `CoachOut`:
+
+```json
+{
+  "text": "Hai evitato 12 kg di CO₂ con la riparazione della giacca…",
+  "facts": { "wardrobe": {...}, "impact": {...}, "ghosts_top3": [...] },
+  "model": "claude-haiku-4-5",
+  "cached": false
+}
+```
+
+Se il guardaroba è vuoto, restituisce un messaggio canned (senza
+chiamare l'LLM). **503** se LLM non configurato.
+
+---
+
+### `GET /repair-tutorials/enrich`
+
+Tutorial di riparazione **generato dinamicamente da LLM**. Fallback alla
+KB hardcoded (`GET /repair-tutorials`) se l'LLM non risponde.
+
+**Query**: `defect` (obbligatorio), `category`, `color`, `condition`.
+
+**Risposta `200`** — `RepairTutorial` con `source: "llm"` (oppure
+`"hardcoded"` se fallback).
+
+---
+
+### `POST /items/{item_id}/try-on`
+
+Try-on virtuale via diffusion model locale (Stable Diffusion inpainting).
+Richiede `CLOSETAI_TRYON_BACKEND=diffusers`.
+
+**Multipart**: `portrait` (file jpeg/png/webp ≤ 10MB).
+
+**Risposta `200`** — `TryOnOut`:
+
+```json
+{
+  "item_id": 12,
+  "filename": "9f8e7d6c5b4a.png",
+  "url": "/api/v1/items/12/try-on/9f8e7d6c5b4a.png",
+  "backend": "diffusers",
+  "prompt": "a photorealistic portrait of a person wearing a rosso t-shirt…",
+  "elapsed_ms": 142300
+}
+```
+
+L'inferenza su CPU è lenta (30s-3min). Su GPU CUDA pochi secondi.
+
+**Risposta `503`** — backend `disabled` o non disponibile.
+
+---
+
+### `GET /items/{item_id}/try-on/{filename}`
+
+Serve l'immagine generata. Il filename UUID funge da capability token.
 
 ---
 
@@ -568,6 +684,7 @@ interface Item {
   price: number | null
   purchase_date: string | null           // "YYYY-MM-DD"
   classification_confidence: number | null  // 0–1, null per mock o se ignota
+  description: string | null             // descrizione AI-generata, null se assente
   condition: 'nuovo' | 'buono' | 'usurato' | 'danneggiato' | null
   retired_at: string | null              // ISO-8601 UTC quando ritirato
   created_at: string                     // ISO-8601 UTC
@@ -720,7 +837,10 @@ effettivi del frontend.
 | `CLOSETAI_CLASSIFIER`    | `fashion-clip`                       | `mock` per fallback / test; `fashion-clip` per ML.   |
 | `CLOSETAI_DEFAULT_LAT`   | `43.7228` (Pisa)                     | latitudine di default per `/outfits/suggest`.        |
 | `CLOSETAI_DEFAULT_LON`   | `10.4017` (Pisa)                     | longitudine di default per `/outfits/suggest`.       |
-| `CLOSETAI_ANTHROPIC_API_KEY` | _(non set)_                      | abilita il flag `llm_enrichment_available` sui tutorial (placeholder Fase 6). |
+| `CLOSETAI_LLM_MODEL`     | `claude-haiku-4-5`                   | modello litellm (Anthropic / OpenAI / Ollama / HF). Vedi ADR-008.       |
+| `CLOSETAI_TRYON_BACKEND` | `disabled`                           | `diffusers` per attivare il try-on virtuale (scarica ~5GB di pesi).     |
+| `ANTHROPIC_API_KEY`      | _(non set)_                          | richiesto per modelli Claude.                                            |
+| `OPENAI_API_KEY`         | _(non set)_                          | richiesto per modelli OpenAI.                                            |
 
 I test impostano questi automaticamente su una tempdir isolata e forzano
 `CLOSETAI_CLASSIFIER=mock` (vedi `backend/tests/conftest.py`).

@@ -257,6 +257,10 @@ frontend/coverage/
 .env.local
 .env.*.local
 
+# Presentazione: rigenerabile via script
+# Per committarla, rimuovi questa riga.
+docs/presentation.pptx
+
 # OS
 .DS_Store
 Thumbs.db

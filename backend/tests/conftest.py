@@ -37,10 +37,12 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 @pytest.fixture
 def items_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Cartella `items/` isolata per il test; sostituisce `ITEMS_DIR` nel router."""
+    """Cartella `items/` isolata per il test; sostituisce `ITEMS_DIR` in tutti
+    i moduli che la importano."""
     d = tmp_path / "items"
     d.mkdir()
     monkeypatch.setattr("app.routers.items.ITEMS_DIR", d)
+    monkeypatch.setattr("app.routers.ai.ITEMS_DIR", d)
     return d
 
 
@@ -66,6 +68,26 @@ def _reset_classifier_singleton() -> Iterator[None]:
     classifier.reset_classifier_cache()
     yield
     classifier.reset_classifier_cache()
+
+
+@pytest.fixture(autouse=True)
+def _reset_tryon_singleton() -> Iterator[None]:
+    """Reset del backend try-on tra test (evita leak del FakeBackend)."""
+    from app.services import tryon
+
+    tryon.reset_backend_cache()
+    yield
+    tryon.reset_backend_cache()
+
+
+@pytest.fixture
+def tryon_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Cartella try-on isolata per test; patch su entrambi i moduli che la usano."""
+    d = tmp_path / "tryon"
+    d.mkdir()
+    monkeypatch.setattr("app.services.tryon.TRYON_DIR", d)
+    monkeypatch.setattr("app.routers.ai.TRYON_DIR", d)
+    return d
 
 
 @pytest.fixture

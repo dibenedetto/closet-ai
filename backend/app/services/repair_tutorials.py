@@ -14,6 +14,12 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from app.services import llm
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 # Difetti supportati. Servono al frontend per popolare la select.
 DEFECTS: tuple[str, ...] = (
@@ -210,10 +216,71 @@ def get_tutorial(defect: str | None, *, category: str | None = None) -> RepairTu
 
 
 def llm_enrichment_available() -> bool:
-    """Hook per UI: indica se l'integrazione LLM è abilitata.
+    """True se l'LLM configurato è raggiungibile (Anthropic, OpenAI, Ollama,…).
 
-    Per ora non chiamiamo Claude API: questo è un placeholder che permette al
-    frontend di mostrare un bottone "arricchisci con AI" quando la chiave è
-    configurata.
+    Anche `CLOSETAI_ANTHROPIC_API_KEY` (legacy) attiva il flag per non rompere
+    chi aveva già configurato il prototipo prima dell'integrazione litellm.
     """
-    return bool(os.environ.get("CLOSETAI_ANTHROPIC_API_KEY"))
+    return llm.is_llm_configured() or bool(os.environ.get("CLOSETAI_ANTHROPIC_API_KEY"))
+
+
+_LLM_SYSTEM_PROMPT = (
+    "Sei un sarto esperto che parla italiano. Quando ti viene chiesto un "
+    "tutorial di riparazione di un capo, rispondi con istruzioni pratiche, "
+    "chiare e brevi. Usa materiali facili da trovare in casa o in merceria. "
+    "Sii prudente: se il danno è grave consiglia un sarto professionale."
+)
+
+_LLM_SCHEMA = (
+    '{"title": str, "difficulty": "facile|media|alta", '
+    '"time_minutes": int, "materials": [str, ...], "steps": [str, ...]}'
+)
+
+
+def enrich_with_llm(
+    defect: str,
+    *,
+    category: str | None = None,
+    color: str | None = None,
+    condition: str | None = None,
+    db: "Session | None" = None,
+) -> RepairTutorial | None:
+    """Genera un tutorial personalizzato via LLM. Ritorna `None` se l'LLM non
+    è raggiungibile (in tal caso il chiamante usa la KB hardcoded)."""
+    if not llm_enrichment_available():
+        return None
+
+    details = []
+    if category:
+        details.append(f"categoria: {category}")
+    if color:
+        details.append(f"colore: {color}")
+    if condition:
+        details.append(f"condizione attuale: {condition}")
+    detail_text = "; ".join(details) if details else "informazioni minime"
+
+    user = (
+        f"Difetto da riparare: **{defect}**. Caratteristiche del capo: {detail_text}.\n"
+        "Genera un tutorial di riparazione personalizzato. Concentrati sul difetto "
+        "specifico e suggerisci materiali ragionevoli per il colore e tipo di tessuto."
+    )
+
+    payload = llm.generate_json(
+        user, schema_hint=_LLM_SCHEMA, system=_LLM_SYSTEM_PROMPT, db=db
+    )
+    if payload is None:
+        return None
+
+    try:
+        return RepairTutorial(
+            defect=defect,
+            category=category,
+            title=str(payload.get("title") or f"Riparazione: {defect}"),
+            difficulty=str(payload.get("difficulty") or "media"),
+            time_minutes=int(payload.get("time_minutes") or 20),
+            materials=[str(m) for m in (payload.get("materials") or []) if m],
+            steps=[str(s) for s in (payload.get("steps") or []) if s],
+            source="llm",
+        )
+    except (TypeError, ValueError):
+        return None

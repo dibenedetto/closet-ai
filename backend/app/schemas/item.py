@@ -24,6 +24,7 @@ class ItemRead(BaseModel):
     price: float | None
     purchase_date: date | None
     classification_confidence: float | None
+    description: str | None
     condition: str | None
     retired_at: datetime | None
     created_at: datetime

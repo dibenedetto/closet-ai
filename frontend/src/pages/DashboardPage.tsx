@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import CoachCard from '../components/CoachCard'
+import { getLlmStatus, type LlmStatus } from '../api/ai'
 import { getImpactStats, type ImpactStats } from '../api/circular'
 import {
   getGhostItems,
@@ -43,8 +45,13 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null)
   const [ghosts, setGhosts] = useState<GhostItem[]>([])
   const [impact, setImpact] = useState<ImpactStats | null>(null)
+  const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ghostDays, setGhostDays] = useState(30)
+
+  useEffect(() => {
+    getLlmStatus().then(setLlmStatus).catch(() => setLlmStatus(null))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -100,6 +107,8 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      <CoachCard llmConfigured={llmStatus?.configured ?? false} ghostAfterDays={ghostDays} />
 
       <div className="stats-grid">
         <StatCard label="Capi totali" value={String(stats.total_items)} />

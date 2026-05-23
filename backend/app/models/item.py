@@ -28,6 +28,8 @@ class Item(Base):
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Descrizione narrativa generata dall'LLM (vedi `services/descriptions.py`).
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Condizione del capo: 'nuovo', 'buono', 'usurato', 'danneggiato'.
     condition: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     # Quando un capo viene "ritirato" (donato/venduto/riciclato) cessa di

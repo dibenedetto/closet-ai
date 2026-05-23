@@ -122,6 +122,21 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
   (vedi [docs/api.md](docs/api.md)).
 - **Frontend** — `VITE_API_BASE_URL` (vedi [frontend/.env.example](frontend/.env.example)).
 
+## Presentazione
+
+La presentazione PowerPoint per la consegna del corso è in
+[docs/presentation.pptx](docs/presentation.pptx). Rigenerala dopo modifiche
+sostanziose con:
+
+```bash
+cd backend
+uv run python scripts/generate_presentation.py
+```
+
+23 slide tecnico-divulgative in italiano. Gli screenshot vengono inseriti
+automaticamente se i file sono in [docs/screenshots/](docs/screenshots/);
+altrimenti compare un placeholder con istruzioni.
+
 ## Stato
 
 Vedi [PLAN.md](PLAN.md) per lo stato dei task e la roadmap completa.

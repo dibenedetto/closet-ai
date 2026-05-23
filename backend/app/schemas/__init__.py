@@ -1,5 +1,6 @@
 """Schemi Pydantic per validazione I/O dell'API."""
 
+from app.schemas.ai import CoachOut, ItemDescriptionOut, TryOnOut, TryOnStatus
 from app.schemas.circular import (
     ActionSuggestion,
     ConditionUpdate,
@@ -28,12 +29,14 @@ from app.schemas.wear import (
 
 __all__ = [
     "ActionSuggestion",
+    "CoachOut",
     "ConditionUpdate",
     "DiagnoseResponse",
     "GhostItem",
     "ImpactStats",
     "ItemActionCreate",
     "ItemActionRead",
+    "ItemDescriptionOut",
     "ItemRead",
     "ItemStats",
     "OutfitFeedbackCreate",
@@ -43,6 +46,8 @@ __all__ = [
     "RepairTutorialOut",
     "SupportedDefects",
     "TopItem",
+    "TryOnOut",
+    "TryOnStatus",
     "WardrobeStats",
     "WeatherSummary",
     "WearEventBatchCreate",

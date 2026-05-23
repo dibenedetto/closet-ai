@@ -13,6 +13,8 @@ export interface Item {
   purchase_date: string | null
   /** Confidenza softmax del classificatore (0–1), null se mock o assente */
   classification_confidence: number | null
+  /** Descrizione narrativa generata da LLM, null se non ancora generata */
+  description: string | null
   /** Condizione (`nuovo`/`buono`/`usurato`/`danneggiato`), null se mai diagnosticato */
   condition: Condition | null
   /** Quando il capo è stato ritirato dal guardaroba (donato/venduto/...). */

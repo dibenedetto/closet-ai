@@ -292,3 +292,30 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px
 .mirror-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
 .mirror-item .name { padding: 12px; font-size: 14px; font-weight: 600; }
 .mirror-item .meta { padding: 0 12px 12px; font-size: 11px; color: var(--muted); }
+
+/* ===== AI-generated content ===== */
+
+.ai-card {
+  background: linear-gradient(135deg, rgba(124,156,255,0.12) 0%, rgba(78,201,160,0.08) 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.ai-card .ai-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.ai-card .ai-text { margin: 8px 0 0 0; font-size: 14px; line-height: 1.55; }
+.ai-card .ai-meta { margin-top: 8px; font-size: 11px; color: var(--muted); }
+
+.tryon-result {
+  margin-top: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+@media (max-width: 600px) {
+  .tryon-result { grid-template-columns: 1fr; }
+}
+.tryon-result img {
+  width: 100%; border-radius: 10px; border: 1px solid var(--border); background: #0a0d14;
+}

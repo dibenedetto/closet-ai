@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import AiDescription from '../components/AiDescription'
 import CircularSection from '../components/CircularSection'
+import TryOnPanel from '../components/TryOnPanel'
+import { getLlmStatus, type LlmStatus } from '../api/ai'
 import { deleteItem, getItem, itemImageUrl, reclassifyItem, type Item } from '../api/items'
 import { getItemStats, type ItemStats } from '../api/stats'
 import { deleteWear, listWears, logWear, type WearEvent } from '../api/wear'
@@ -31,10 +34,15 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<Item | null>(null)
   const [stats, setStats] = useState<ItemStats | null>(null)
   const [wears, setWears] = useState<WearEvent[]>([])
+  const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [reclassifying, setReclassifying] = useState(false)
   const [logging, setLogging] = useState(false)
+
+  useEffect(() => {
+    getLlmStatus().then(setLlmStatus).catch(() => setLlmStatus(null))
+  }, [])
 
   const itemId = Number(id)
   const isValidId = Number.isInteger(itemId) && itemId > 0
@@ -231,6 +239,14 @@ export default function ItemDetailPage() {
           </ul>
         )}
       </div>
+
+      <AiDescription
+        item={item}
+        llmConfigured={llmStatus?.configured ?? false}
+        onUpdated={(text) => setItem({ ...item, description: text })}
+      />
+
+      <TryOnPanel item={item} />
 
       <CircularSection item={item} onItemRefresh={() => void refresh()} />
     </section>
