@@ -6,7 +6,7 @@
 ---
 
 ## Stato attuale
-**Fase**: 5 — Modulo circolare (completata)
+**Fase**: 6 — Polish e demo (completata) · **MVP CHIUSO**
 **Ultimo aggiornamento**: 2026-05-21
 
 > 1.1 Setup repository completato.
@@ -21,6 +21,7 @@
 > 3.0 Fase 3 completata — `WearEvent` con cascade delete, 6 endpoint REST (`wear`, `wears`, `batch`, `wear-events/{id}`, `items/{id}/stats`, `stats/wardrobe`, `stats/ghosts`), service `services/stats.py`, UI con quick-wear sulle card + storico nel detail + dashboard impatto. 51 test verdi (14 nuovi). PRAGMA `foreign_keys=ON` su SQLite.
 > 4.0 Fase 4 completata — recommender con generazione combinazioni (top/bottom/dress/outerwear/shoes), score colore (HSL) + meteo (Open-Meteo + fallback) + bonus capi fantasma. Endpoint `/outfits/suggest`, `/outfits/feedback` (CRUD), tabella `outfit_feedback`. Pagina `/today` "Cosa metto oggi?" con breakdown e like/dislike. 68 test verdi (17 nuovi).
 > 5.0 Fase 5 completata — `Item.condition` + `Item.retired_at` + tabella `item_actions`. Servizi `condition.py` (diagnosi heuristic), `circular.py` (tabella CO₂ × % evitamento), `repair_tutorials.py` (8 tutorial hardcoded). Endpoint `/items/{id}/diagnose`, `/condition`, `/items/{id}/actions` CRUD, `/stats/impact`, `/repair-tutorials`. UI: `<CircularSection>` su detail + Impact card + breakdown azioni in dashboard. Capi ritirati esclusi da ghost/wardrobe. 88 test verdi (20 nuovi).
+> 6.0 Fase 6 completata — **MVP CHIUSO**. Polish UI (skeleton loaders, transitions, mobile responsive, hero banner + filtri sulla home), dashboard impatto con equivalenze CO₂ tangibili e bar chart CSS, pagina `/mirror` kiosk per RPi + script kiosk Chromium, ADR-007 per try-on diffusion (rimandato), seed demo (`seed_demo.py`), `docs/demo-script.md`, `docs/handover.md`. 88 test ancora verdi, build 318 kB (100 kB gzip).
 
 ---
 
@@ -143,12 +144,12 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
 ## Fase 6 — Polish e demo (settimana 6)
 
-- [ ] UI/UX rifinita — usare strumenti AI generativi (v0, Figma AI) per design
-- [ ] Dashboard impatto sostenibilità (CO₂ totale evitata, capi salvati, ecc.)
-- [ ] Prototipo specchio con Raspberry Pi (opzionale, se tempo)
-- [ ] Try-on virtuale con modello diffusion (estensione, opzionale)
-- [ ] Demo video / presentazione finale
-- [ ] Documentazione completa per consegna
+- [x] UI/UX rifinita — tipografia, transitions, skeleton loaders, mobile responsive, palette coerente, hero banner sulla home con stats + filtri (ricerca/categoria/stato)
+- [x] Dashboard impatto sostenibilità — sezione "🌱 Sostenibilità in pratica" con equivalenze tangibili (km auto, voli, m² foresta), bar chart CSS per breakdown azioni
+- [x] Prototipo specchio Raspberry Pi — pagina `/mirror` kiosk-friendly + `scripts/start-mirror.sh` + `docs/raspberry-pi.md` (skeleton, non validato su HW)
+- [~] Try-on virtuale — rimandato post-corso (ADR-007 in `architecture.md`: costo modello + privacy)
+- [x] Demo finale — `docs/demo-script.md` con scaletta 8-10 min + `backend/scripts/seed_demo.py` (12 capi, 158 wear, 2 azioni circolari)
+- [x] Documentazione completa per consegna — `docs/handover.md` con stato finale, futures, decisioni; doc completa anche su API, architettura, RPi
 
 ---
 

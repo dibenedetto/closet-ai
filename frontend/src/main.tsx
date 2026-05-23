@@ -8,6 +8,7 @@ import AddItemPage from './pages/AddItemPage'
 import ItemDetailPage from './pages/ItemDetailPage'
 import DashboardPage from './pages/DashboardPage'
 import TodayPage from './pages/TodayPage'
+import MirrorPage from './pages/MirrorPage'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -22,6 +23,8 @@ const router = createBrowserRouter([
       { path: 'today', element: <TodayPage /> },
     ],
   },
+  // La pagina specchio gira fullscreen, senza topbar/nav.
+  { path: '/mirror', element: <MirrorPage /> },
 ])
 
 const rootEl = document.getElementById('root')

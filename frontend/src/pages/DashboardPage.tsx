@@ -13,18 +13,30 @@ function StatCard({
   label,
   value,
   sub,
+  highlight = false,
 }: {
   label: string
   value: string
   sub?: string
+  highlight?: boolean
 }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card" style={highlight ? { borderColor: 'var(--ok)' } : undefined}>
       <div className="label">{label}</div>
-      <div className="value">{value}</div>
+      <div className="value" style={highlight ? { color: 'var(--ok)' } : undefined}>{value}</div>
       {sub && <div className="sub">{sub}</div>}
     </div>
   )
+}
+
+/** Equivalenze CO₂ tangibili. Fonti indicative: 1 km auto media ≈ 0.18 kg CO₂eq,
+ * 1 volo Pisa-Roma andata ≈ 80 kg pro capite, 1 m² di foresta assorbe ≈ 8 kg/anno. */
+function co2Equivalents(kg: number): { km: number; flights: number; trees: number } {
+  return {
+    km: Math.round(kg / 0.18),
+    flights: kg / 80,
+    trees: kg / 8,
+  }
 }
 
 export default function DashboardPage() {
@@ -116,6 +128,7 @@ export default function DashboardPage() {
               label="CO₂ evitata"
               value={`${impact.total_co2_saved_kg.toFixed(1)} kg`}
               sub={`${impact.total_actions} azioni circolari`}
+              highlight={impact.total_co2_saved_kg > 0}
             />
             <StatCard
               label="Capi salvati"
@@ -126,32 +139,91 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {impact && impact.total_actions > 0 && (
-        <section className="panel" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Azioni circolari per tipo</h3>
-          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-            {Object.entries(impact.actions_by_type).map(([type, count]) => (
-              <div
-                key={type}
-                style={{
-                  padding: 10,
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  background: 'var(--panel-2)',
-                }}
-              >
-                <div className="muted" style={{ fontSize: 11, textTransform: 'capitalize' }}>{type}</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{count}</div>
-                <div className="muted" style={{ fontSize: 11 }}>
-                  −{(impact.co2_by_type[type] ?? 0).toFixed(1)} kg CO₂
-                </div>
-              </div>
-            ))}
-          </div>
+      {impact && impact.total_co2_saved_kg > 0 && (
+        <section
+          className="panel"
+          style={{
+            marginBottom: 16,
+            background: 'linear-gradient(135deg, rgba(78,201,160,0.10) 0%, rgba(124,156,255,0.06) 100%)',
+            borderColor: 'var(--ok)',
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>🌱 Sostenibilità in pratica</h3>
+          {(() => {
+            const eq = co2Equivalents(impact.total_co2_saved_kg)
+            return (
+              <p style={{ fontSize: 15, lineHeight: 1.6, margin: '8px 0' }}>
+                Hai evitato <b>{impact.total_co2_saved_kg.toFixed(1)} kg di CO₂eq</b> grazie alle
+                tue {impact.total_actions} azioni circolari. È come{' '}
+                <b>{eq.km.toLocaleString('it-IT')} km</b> in auto risparmiati,{' '}
+                <b>{eq.flights.toFixed(2)}</b> voli Pisa-Roma evitati, o quanto assorbono{' '}
+                <b>{eq.trees.toFixed(1)} m²</b> di foresta in un anno.
+              </p>
+            )
+          })()}
+          <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+            Stime indicative: 1 km auto media UE ≈ 0,18 kg CO₂eq · 1 volo PSA-FCO ≈ 80 kg pro capite · 1 m² foresta ≈ 8 kg CO₂/anno.
+          </p>
         </section>
       )}
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+      {impact && impact.total_actions > 0 && (
+        <section className="panel" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Azioni circolari per tipo</h3>
+          {(() => {
+            const maxCo2 = Math.max(...Object.values(impact.co2_by_type), 1)
+            return (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {Object.entries(impact.actions_by_type).map(([type, count]) => {
+                  const co2 = impact.co2_by_type[type] ?? 0
+                  const pct = (co2 / maxCo2) * 100
+                  return (
+                    <div key={type}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: 12,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{type}</span>
+                        <span className="muted">
+                          {count}× · −{co2.toFixed(1)} kg CO₂
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          height: 10,
+                          background: 'var(--panel-2)',
+                          borderRadius: 5,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${pct}%`,
+                            height: '100%',
+                            background:
+                              type === 'riparazione'
+                                ? 'var(--accent)'
+                                : type === 'riciclo'
+                                  ? 'var(--warn)'
+                                  : 'var(--ok)',
+                            transition: 'width 400ms ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </section>
+      )}
+
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         <section className="panel">
           <h3 style={{ marginTop: 0 }}>Top capi più indossati</h3>
           {stats.top_worn.length === 0 ? (

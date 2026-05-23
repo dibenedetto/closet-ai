@@ -147,6 +147,39 @@ i rimanenti. Mappiamo poi sul nome più vicino della palette
 
 ---
 
+## ADR-007 — Try-on virtuale (diffusion): rimandato
+
+**Contesto**: il PLAN Fase 6 elenca il *try-on virtuale* (es. IDM-VTON,
+StreetTryOn) fra le estensioni opzionali. Si tratta di sintetizzare un
+ritratto dell'utente che indossa virtualmente un capo del guardaroba,
+usando un modello di diffusion image-to-image.
+
+**Decisione**: **rimandato a post-corso**. La Fase 6 non lo include nel
+prototipo consegnato.
+
+**Motivazione**:
+
+- I pesi di IDM-VTON sono ~5 GB. Costo di download/storage non
+  giustificabile per una demo studentesca.
+- L'inferenza richiede una GPU con almeno 12 GB di VRAM per essere
+  utilizzabile; su CPU una singola immagine impiega minuti, non secondi.
+- La pipeline UX (caricamento ritratto dell'utente, allineamento pose,
+  masking) introduce molta complessità extra fuori dal core "wardrobe +
+  sostenibilità".
+- Privacy: il try-on richiede di salvare immagini del **corpo** dell'utente.
+  Confligge con il principio "privacy by design" dell'MVP (ADR
+  implicito su [PROJECT.md](../PROJECT.md) §5.3).
+
+**Path di sblocco se servisse**:
+
+1. Aggiungere `services/tryon.py` con interfaccia
+   `try_on(garment_path, user_photo) -> generated_image_path`.
+2. Esporre `POST /items/{id}/try-on` con upload del ritratto.
+3. Mostrare risultato in modale sulla pagina `/items/{id}`.
+4. Salvataggio risultati: **out-of-DB**, in `data/tryon/` con TTL breve.
+
+---
+
 ## Layout dei moduli ML
 
 ```
