@@ -122,20 +122,27 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
   (vedi [docs/api.md](docs/api.md)).
 - **Frontend** — `VITE_API_BASE_URL` (vedi [frontend/.env.example](frontend/.env.example)).
 
-## Presentazione
+## Presentazione e notebook ML
 
-La presentazione PowerPoint per la consegna del corso è in
-[docs/presentation.pptx](docs/presentation.pptx). Rigenerala dopo modifiche
-sostanziose con:
+Per la consegna del corso (audience: design):
+
+- **Presentazione**: [docs/presentation.pptx](docs/presentation.pptx) —
+  14 slide divulgative in italiano (~10 min). Allineata ai 4 blocchi
+  richiesti: problem setting, workflow IA generativa, strumento ML,
+  analisi di sostenibilità + studio di fattibilità.
+- **Notebook ML**: [ml/notebooks/closetai_ml.ipynb](ml/notebooks/closetai_ml.ipynb) —
+  tre modelli scikit-learn addestrati su dati sintetici realistici
+  (classificazione ghost-predictor, regressione wear-forecast, clustering
+  stili). Soddisfa il requisito "INTEGRAZIONE OBBLIGATORIA" del corso.
+
+Per rigenerare:
 
 ```bash
 cd backend
-uv run python scripts/generate_presentation.py
+uv run python scripts/generate_presentation.py        # .pptx
+uv run python scripts/build_ml_notebook.py            # struttura .ipynb
+uv run jupyter nbconvert --to notebook --execute --inplace ../ml/notebooks/closetai_ml.ipynb
 ```
-
-23 slide tecnico-divulgative in italiano. Gli screenshot vengono inseriti
-automaticamente se i file sono in [docs/screenshots/](docs/screenshots/);
-altrimenti compare un placeholder con istruzioni.
 
 ## Stato
 

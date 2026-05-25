@@ -50,6 +50,12 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 - Estrazione colore dominante con quantize + filtro sfondo chiaro.
 - Diagnosi condizione capo via euristica `wear_count + età`.
 - Tabella CO₂ × % evitamento per stima dell'impatto circolare.
+- **Notebook addestrato** [ml/notebooks/closetai_ml.ipynb](../ml/notebooks/closetai_ml.ipynb):
+  3 modelli sklearn su dati sintetici (classificazione "ghost predictor",
+  regressione "wear forecast", clustering "stili"). Soddisfa il requisito
+  del corso "INTEGRAZIONE OBBLIGATORIA — Classificazione, Regressione,
+  Clustering". Riproducibile via
+  `backend/scripts/build_ml_notebook.py` + `jupyter nbconvert --execute`.
 
 ### AI generativa (attivata in Fase 6.1)
 
