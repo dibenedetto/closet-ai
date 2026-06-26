@@ -144,6 +144,50 @@ uv run python scripts/build_ml_notebook.py            # struttura .ipynb
 uv run jupyter nbconvert --to notebook --execute --inplace ../ml/notebooks/closetai_ml.ipynb
 ```
 
+## Modello di diagnosi stato (rete addestrata da noi)
+
+Una rete neurale (MLP su embedding Fashion-CLIP) che dalla **foto** prevede
+lo stato di conservazione del capo. Workflow completo:
+
+```bash
+cd backend
+uv run python scripts/fetch_real_garments.py --count 240    # scarica capi reali (FashionMNIST)
+uv run python scripts/build_condition_dataset.py --per-class 150  # genera dataset etichettato
+uv run python scripts/train_condition_model.py --no-cache   # addestra + valuta + salva i pesi
+```
+
+I pesi salvati (`ml/weights/condition_head.pt`) vengono caricati
+automaticamente dal backend, che sostituisce l'euristica con la rete.
+Dettagli in [docs/architecture.md](docs/architecture.md) (ADR-009) e nella
+[datasheet del dataset](docs/dataset-datasheet.md).
+
+### Estensione: VLM + LoRA (Approccio C, richiede GPU)
+
+Addestra un Visual-LLM (Qwen2-VL-2B) che produce stato **e** tutorial
+personalizzato in un colpo solo. Una **pipeline automatica** esegue tutti
+gli step (scarico capi reali → dataset → distillazione tutorial → training):
+
+```bash
+cd backend
+# Valida tutto SENZA addestrare (veloce, niente download pesante):
+uv run python scripts/train_condition_vlm_pipeline.py --dry-run
+
+# Pipeline completa (GPU + ~4GB download al primo run):
+uv run python scripts/train_condition_vlm_pipeline.py
+
+# Con tutorial distillati da un VLM grande + QLoRA 4-bit (meno VRAM):
+uv run python scripts/train_condition_vlm_pipeline.py --distill --load-4bit
+```
+
+La pipeline è idempotente (salta gli step già fatti; `--force` per rifare).
+Al termine, l'adapter in `ml/weights/condition_vlm_lora/` viene usato
+automaticamente dal backend (routing `auto`). I singoli step restano
+eseguibili separatamente (`fetch_real_garments.py`,
+`build_condition_dataset.py`, `distill_tutorials.py`,
+`train_condition_vlm_lora.py`).
+
+Dettagli e requisiti hardware in [docs/architecture.md](docs/architecture.md) (ADR-010).
+
 ## Stato
 
 Vedi [PLAN.md](PLAN.md) per lo stato dei task e la roadmap completa.

@@ -70,3 +70,26 @@ export async function getGhostItems(
   const url = qs ? `${API_BASE}/stats/ghosts?${qs}` : `${API_BASE}/stats/ghosts`
   return jsonOrThrow<GhostItem[]>(await fetch(url))
 }
+
+export interface GapItem {
+  code: string
+  label: string
+  advice: string
+  probability: number | null
+}
+
+export interface GapAnalysis {
+  total_items: number
+  counts_by_category: Record<string, number>
+  n_colors: number
+  has_neutral: boolean
+  ghost_ratio: number
+  balanced: boolean
+  gaps: GapItem[]
+  /** "neural-net" se predetto dalla rete, "rules" se dal fallback a regole */
+  source: string
+}
+
+export async function getGapAnalysis(): Promise<GapAnalysis> {
+  return jsonOrThrow<GapAnalysis>(await fetch(`${API_BASE}/stats/gap-analysis`))
+}

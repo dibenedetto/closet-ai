@@ -41,3 +41,22 @@ class GhostItem(BaseModel):
     purchase_date: date | None
     days_owned: int | None
     price: float | None
+
+
+class GapItemOut(BaseModel):
+    code: str
+    label: str
+    advice: str
+    probability: float | None
+
+
+class GapAnalysisOut(BaseModel):
+    total_items: int
+    counts_by_category: dict[str, int]
+    n_colors: int
+    has_neutral: bool
+    ghost_ratio: float
+    balanced: bool
+    gaps: list[GapItemOut]
+    # "neural-net" se predetto dalla rete, "rules" se dal fallback a regole.
+    source: str

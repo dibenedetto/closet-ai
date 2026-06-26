@@ -238,6 +238,18 @@ export default function CircularSection({
         )}
       </div>
 
+      {diagnosis?.tutorial && (
+        <div className="ai-card" style={{ marginBottom: 12 }}>
+          <span className="ai-label">✨ AI · diagnosi dalla foto</span>
+          {diagnosis.defect && (
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              Difetto rilevato: {diagnosis.defect}
+            </p>
+          )}
+          <p className="ai-text">{diagnosis.tutorial}</p>
+        </div>
+      )}
+
       {item.retired_at && (
         <p className="muted" style={{ fontSize: 12 }}>
           ⓘ Capo ritirato il {fmtDate(item.retired_at)}. Le azioni nuove sono opzionali.

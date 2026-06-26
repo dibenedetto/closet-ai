@@ -236,6 +236,13 @@ ml/weights/*
 *.ckpt
 *.h5
 
+# Dataset generati / immagini sorgente — rigenerabili via script.
+# Versioniamo solo lo script, la datasheet e il README della cartella source.
+ml/datasets/garment_condition/
+ml/datasets/source/*
+!ml/datasets/source/README.md
+!ml/datasets/source/.gitkeep
+
 # Node / Frontend
 node_modules/
 .npm/

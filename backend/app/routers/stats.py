@@ -7,7 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Item
-from app.schemas import GhostItem, ImpactStats, ItemStats, WardrobeStats
+from app.schemas import (
+    GapAnalysisOut,
+    GhostItem,
+    ImpactStats,
+    ItemStats,
+    WardrobeStats,
+)
+from app.services.gap_analysis import analyze_wardrobe
 from app.services.stats import (
     DEFAULT_GHOST_AFTER_DAYS,
     compute_impact_stats,
@@ -56,3 +63,24 @@ def get_impact_stats(db: Session = Depends(get_db)) -> dict:
     """Statistiche aggregate del modulo circolare: totale azioni eseguite,
     kg CO₂ evitati, breakdown per tipo di azione, capi ritirati e riparati."""
     return compute_impact_stats(db)
+
+
+@router.get("/stats/gap-analysis", response_model=GapAnalysisOut)
+def get_gap_analysis(db: Session = Depends(get_db)) -> GapAnalysisOut:
+    """Analizza la composizione del guardaroba con la rete neurale addestrata
+    (fallback a regole se i pesi non ci sono) e individua i vuoti funzionali
+    con raccomandazioni d'acquisto consapevole."""
+    a = analyze_wardrobe(db)
+    return GapAnalysisOut(
+        total_items=a.total_items,
+        counts_by_category=a.counts_by_category,
+        n_colors=a.n_colors,
+        has_neutral=a.has_neutral,
+        ghost_ratio=a.ghost_ratio,
+        balanced=a.balanced,
+        gaps=[
+            {"code": g.code, "label": g.label, "advice": g.advice, "probability": g.probability}
+            for g in a.gaps
+        ],
+        source=a.source,
+    )

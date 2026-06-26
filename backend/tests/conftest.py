@@ -27,6 +27,10 @@ os.environ.setdefault(
 )
 # I test usano il classificatore mock: deterministico, niente download.
 os.environ["CLOSETAI_CLASSIFIER"] = "mock"
+# Forziamo l'euristica per la diagnosi condizione: i pesi vision puntano a un
+# file inesistente, così i test restano deterministici e non dipendono da un
+# modello addestrato. I test specifici del modello montano un fake backend.
+os.environ["CLOSETAI_CONDITION_WEIGHTS"] = str(_TEST_ROOT / "no_condition_weights.pt")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -43,6 +47,7 @@ def items_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     d.mkdir()
     monkeypatch.setattr("app.routers.items.ITEMS_DIR", d)
     monkeypatch.setattr("app.routers.ai.ITEMS_DIR", d)
+    monkeypatch.setattr("app.services.condition.ITEMS_DIR", d)
     return d
 
 
@@ -78,6 +83,18 @@ def _reset_tryon_singleton() -> Iterator[None]:
     tryon.reset_backend_cache()
     yield
     tryon.reset_backend_cache()
+
+
+@pytest.fixture(autouse=True)
+def _reset_condition_model_singleton() -> Iterator[None]:
+    """Reset dei classifier di condizione (MLP + VLM) tra test."""
+    from app.ml import condition_model, condition_vlm
+
+    condition_model.reset_condition_classifier_cache()
+    condition_vlm.reset_condition_vlm_cache()
+    yield
+    condition_model.reset_condition_classifier_cache()
+    condition_vlm.reset_condition_vlm_cache()
 
 
 @pytest.fixture

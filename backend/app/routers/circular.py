@@ -69,6 +69,10 @@ def diagnose_item(item_id: int, db: Session = Depends(get_db)) -> DiagnoseRespon
         wear_count=result.wear_count,
         days_owned=result.days_owned,
         rationale=result.rationale,
+        source=result.source,
+        confidence=result.confidence,
+        defect=result.defect,
+        tutorial=result.tutorial,
         suggestions=suggestions,
     )
 

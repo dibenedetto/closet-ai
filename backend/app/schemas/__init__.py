@@ -19,7 +19,14 @@ from app.schemas.outfit import (
     OutfitSuggestion,
     WeatherSummary,
 )
-from app.schemas.stats import GhostItem, ItemStats, TopItem, WardrobeStats
+from app.schemas.stats import (
+    GapAnalysisOut,
+    GapItemOut,
+    GhostItem,
+    ItemStats,
+    TopItem,
+    WardrobeStats,
+)
 from app.schemas.wear import (
     WearEventBatchCreate,
     WearEventBatchItem,
@@ -32,6 +39,8 @@ __all__ = [
     "CoachOut",
     "ConditionUpdate",
     "DiagnoseResponse",
+    "GapAnalysisOut",
+    "GapItemOut",
     "GhostItem",
     "ImpactStats",
     "ItemActionCreate",

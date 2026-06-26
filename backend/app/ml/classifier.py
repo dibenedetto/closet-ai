@@ -148,14 +148,18 @@ class FashionClipClassifier:
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
             self._text_features = text_features
 
-    def classify(self, image_path: str | Path) -> ClassificationResult:
+    def embed_image(self, image_path: str | Path) -> list[float]:
+        """Restituisce solo l'embedding visivo 512d normalizzato dell'immagine.
+
+        Esposto per riusare Fashion-CLIP come *feature extractor* (es. per la
+        testa di classificazione dello stato di conservazione, vedi
+        `app/ml/condition_model.py`)."""
         from PIL import Image
         import torch
 
         self._ensure_loaded()
         assert self._model is not None
         assert self._processor is not None
-        assert self._text_features is not None
 
         with Image.open(image_path) as im:
             rgb_image = im.convert("RGB")
@@ -165,13 +169,24 @@ class FashionClipClassifier:
             vision_outputs = self._model.vision_model(**image_inputs)
             image_features = self._model.visual_projection(vision_outputs.pooler_output)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+            return image_features[0].tolist()
 
+    def classify(self, image_path: str | Path) -> ClassificationResult:
+        import torch
+
+        self._ensure_loaded()
+        assert self._model is not None
+        assert self._text_features is not None
+
+        embedding = self.embed_image(image_path)
+
+        with torch.no_grad():
+            image_features = torch.tensor(embedding).unsqueeze(0)
             # Logits scalati come in CLIP paper (temperatura 100)
             logits = 100.0 * image_features @ self._text_features.T
             probs = logits.softmax(dim=-1)[0]
             top = int(probs.argmax().item())
             confidence = float(probs[top].item())
-            embedding = image_features[0].tolist()
 
         return ClassificationResult(
             category=CATEGORIES[top],

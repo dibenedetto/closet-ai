@@ -16,6 +16,12 @@ export interface DiagnoseResponse {
   wear_count: number
   days_owned: number | null
   rationale: string
+  /** Backend usato: "vlm-lora" | "clip-mlp" | "heuristic" */
+  source: string
+  confidence: number | null
+  /** Difetto e tutorial valorizzati solo dal backend VLM (Approccio C) */
+  defect: string | null
+  tutorial: string | null
   suggestions: ActionSuggestion[]
 }
 

@@ -155,6 +155,35 @@ Obiettivo: sostituire la classificazione mock con un modello pre-trained reale.
 
 ---
 
+## Fase 7 — Rete addestrata da noi: diagnosi stato di conservazione (in corso)
+
+Obiettivo: sostituire l'euristica `condition.py` con una **rete neurale
+addestrata da noi** che, **da una foto**, prevede lo stato di conservazione
+del capo (nuovo/buono/usurato/danneggiato) ed eventualmente un tutorial.
+Hardware target: GPU locale.
+
+### 7.1 Dataset (completato)
+- [x] Builder `backend/scripts/build_condition_dataset.py` — degradazione sintetica controllata
+- [x] Sorgenti: cartella `ml/datasets/source/` (3 modalità: FashionMNIST / foto proprie / bootstrap)
+- [x] Downloader `scripts/fetch_real_garments.py` — FashionMNIST → forme reali ricolorate
+- [x] 6 degradazioni (fading, pilling, wrinkles, stain, tear, hole) mappate ai 4 stati
+- [x] Output: `images/{stato}/`, `manifest.csv` (split 70/15/15 stratificato), `vlm_dataset.jsonl` (instruction-tuning con stato+tutorial dalla KB), `preview.png`
+- [x] Datasheet `docs/dataset-datasheet.md` (schema Gebru et al., bias e limiti documentati)
+- [ ] Raccolta di **foto di usura reale** per ridurre il domain gap residuo (azione utente)
+
+### 7.2 Modello
+- [x] **A** — testa MLP su embedding Fashion-CLIP (CPU-friendly) — `app/ml/condition_model.py`
+- [x] Training script `scripts/train_condition_model.py` (estrazione embedding con cache + MLP PyTorch + early stopping)
+- [x] Valutazione: **test accuracy ~0.96** (basi reali FashionMNIST) / ~0.94 (sintetico), confusion matrix salvata
+- [x] Integrazione `services/condition.py`: usa il modello se i pesi esistono + foto leggibile, altrimenti euristica; espone `source` + `confidence`
+- [x] 5 test (MLP, fallback graceful, predizione con fake, file mancante)
+- [ ] **B** — fine-tuning CNN (ResNet/EfficientNet) con torchvision *(opzionale)*
+- [x] **C** — VLM + LoRA: **codice production-ready**. Training (`train_condition_vlm_lora.py`), distillazione tutorial (`distill_tutorials.py`), inferenza (`app/ml/condition_vlm.py`) e **pipeline automatica** (`train_condition_vlm_pipeline.py`). Manca solo eseguire sulla GPU dell'utente. Vedi ADR-010.
+- [x] Integrazione Approccio C in `services/condition.py` — routing a cascata `CLOSETAI_CONDITION_BACKEND` (auto/vlm-lora/clip-mlp/heuristic) con fallback fail-safe, `defect`+`tutorial` esposti in `/diagnose` + UI. 13 test (VLM mock).
+- [ ] Raccolta foto reali → riaddestrare (riduce il domain gap del sintetico)
+
+---
+
 ## Estensioni e idee parcheggiate
 
 - Modalità famiglia / guardaroba condiviso

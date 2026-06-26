@@ -5,8 +5,10 @@ import CoachCard from '../components/CoachCard'
 import { getLlmStatus, type LlmStatus } from '../api/ai'
 import { getImpactStats, type ImpactStats } from '../api/circular'
 import {
+  getGapAnalysis,
   getGhostItems,
   getWardrobeStats,
+  type GapAnalysis,
   type GhostItem,
   type WardrobeStats,
 } from '../api/stats'
@@ -45,12 +47,14 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null)
   const [ghosts, setGhosts] = useState<GhostItem[]>([])
   const [impact, setImpact] = useState<ImpactStats | null>(null)
+  const [gap, setGap] = useState<GapAnalysis | null>(null)
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ghostDays, setGhostDays] = useState(30)
 
   useEffect(() => {
     getLlmStatus().then(setLlmStatus).catch(() => setLlmStatus(null))
+    getGapAnalysis().then(setGap).catch(() => setGap(null))
   }, [])
 
   useEffect(() => {
@@ -109,6 +113,59 @@ export default function DashboardPage() {
       </div>
 
       <CoachCard llmConfigured={llmStatus?.configured ?? false} ghostAfterDays={ghostDays} />
+
+      {gap && gap.total_items > 0 && (
+        <section
+          className="panel"
+          style={{
+            marginBottom: 16,
+            borderColor: gap.balanced ? 'var(--ok)' : 'var(--warn)',
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>
+            🧩 Analisi guardaroba
+            <span className="muted" style={{ fontSize: 11, marginLeft: 8, fontWeight: 400 }}>
+              {gap.source === 'neural-net' ? 'rete neurale' : 'regole'}
+            </span>
+          </h3>
+          {gap.balanced ? (
+            <p style={{ margin: 0, color: 'var(--ok)' }}>
+              Il tuo guardaroba è equilibrato: nessun vuoto funzionale rilevato. 🎉
+            </p>
+          ) : (
+            <>
+              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+                La rete ha individuato {gap.gaps.length}{' '}
+                {gap.gaps.length === 1 ? 'vuoto funzionale' : 'vuoti funzionali'} —
+                prima di comprare, considera l'usato.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
+                {gap.gaps.map((g) => (
+                  <li
+                    key={g.code}
+                    style={{
+                      padding: 10,
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      background: 'var(--panel-2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <strong style={{ fontSize: 13 }}>{g.label}</strong>
+                      {g.probability != null && (
+                        <span className="muted" style={{ fontSize: 11 }}>
+                          {Math.round(g.probability * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{g.advice}</div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
 
       <div className="stats-grid">
         <StatCard label="Capi totali" value={String(stats.total_items)} />

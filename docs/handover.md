@@ -56,6 +56,29 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
   del corso "INTEGRAZIONE OBBLIGATORIA — Classificazione, Regressione,
   Clustering". Riproducibile via
   `backend/scripts/build_ml_notebook.py` + `jupyter nbconvert --execute`.
+- **Diagnosi stato — rete addestrata da noi** (Fase 7, Approccio A):
+  - Dataset: [`build_condition_dataset.py`](../backend/scripts/build_condition_dataset.py)
+    via degradazione sintetica (datasheet in
+    [dataset-datasheet.md](dataset-datasheet.md)).
+  - Modello: MLP su embedding Fashion-CLIP
+    ([`app/ml/condition_model.py`](../backend/app/ml/condition_model.py)),
+    addestrato con
+    [`train_condition_model.py`](../backend/scripts/train_condition_model.py).
+    **Test accuracy ~0.94** sul sintetico (vedi ADR-009 per il caveat domain
+    gap). Pesi in `ml/weights/condition_head.pt` (gitignored, rigenerabili).
+  - Integrazione: `services/condition.py` usa il modello se disponibile,
+    altrimenti euristica; espone `source`/`confidence`.
+  - VLM+LoRA (Approccio C) — **integrazione production-ready**:
+    routing a cascata in `services/condition.py`
+    (`CLOSETAI_CONDITION_BACKEND` = auto/vlm-lora/clip-mlp/heuristic) con
+    fallback fail-safe, output VLM validato, `defect`+`tutorial` esposti in
+    `/diagnose` e mostrati nella Ut. Training + distillazione tutorial
+    pronti ([`train_condition_vlm_lora.py`](../backend/scripts/train_condition_vlm_lora.py),
+    [`distill_tutorials.py`](../backend/scripts/distill_tutorials.py)).
+    **Manca solo** addestrare l'adapter sulla GPU dell'utente; il codice è
+    testato con un VLM fittizio. **Pipeline automatica**:
+    `scripts/train_condition_vlm_pipeline.py` (fetch → build → distill →
+    train, idempotente, con `--dry-run`). Vedi ADR-010.
 
 ### AI generativa (attivata in Fase 6.1)
 

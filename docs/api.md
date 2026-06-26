@@ -444,10 +444,13 @@ Lista cronologica (desc) dei feedback salvati. Query: `limit` (1–200, default 
 
 ### `POST /items/{item_id}/diagnose`
 
-Esegue la diagnosi euristica della condizione del capo (`nuovo`/`buono`/
-`usurato`/`danneggiato`) basandosi su `wear_count` + età. Se l'item non aveva
-ancora una `condition`, viene persistita. Restituisce anche la lista di
-azioni circolari suggerite con stima CO₂ evitata.
+Diagnostica la condizione del capo (`nuovo`/`buono`/`usurato`/`danneggiato`).
+Usa il backend configurato da `CLOSETAI_CONDITION_BACKEND` (default `auto`:
+prova il VLM fine-tunato, poi l'MLP su Fashion-CLIP, poi l'euristica
+`wear_count` + età). Il campo `source` indica quale backend ha risposto.
+Quando il backend è il VLM (`vlm-lora`), `defect` e `tutorial` sono
+valorizzati. Se l'item non aveva ancora una `condition`, viene persistita.
+Restituisce anche la lista di azioni circolari suggerite con stima CO₂.
 
 **Risposta `200`** — `DiagnoseResponse`:
 
@@ -458,6 +461,10 @@ azioni circolari suggerite con stima CO₂ evitata.
   "wear_count": 42,
   "days_owned": 540,
   "rationale": "42 utilizzi su 540 giorni: segni d'uso attesi",
+  "source": "heuristic",
+  "confidence": null,
+  "defect": null,
+  "tutorial": null,
   "suggestions": [
     {
       "action_type": "riparazione",

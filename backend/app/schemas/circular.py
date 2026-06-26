@@ -28,6 +28,12 @@ class DiagnoseResponse(BaseModel):
     wear_count: int
     days_owned: int | None
     rationale: str
+    # Backend usato: "vlm-lora" | "clip-mlp" | "heuristic".
+    source: str = "heuristic"
+    confidence: float | None = None
+    # Difetto e tutorial sono popolati solo dal backend VLM (Approccio C).
+    defect: str | None = None
+    tutorial: str | None = None
     suggestions: list[ActionSuggestion]
 
 
