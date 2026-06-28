@@ -39,6 +39,7 @@
 | `GET /api/v1/repair-tutorials/enrich`     | tutorial via LLM (con fallback)   |
 | `POST /api/v1/items/{id}/try-on`          | try-on virtuale via diffusion     |
 | `GET /api/v1/items/{id}/try-on/{file}`    | serve immagine try-on generata    |
+| `GET /api/v1/stats/gap-analysis`          | vuoti funzionali del guardaroba (rete neurale) |
 
 Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
@@ -68,6 +69,17 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
     gap). Pesi in `ml/weights/condition_head.pt` (gitignored, rigenerabili).
   - Integrazione: `services/condition.py` usa il modello se disponibile,
     altrimenti euristica; espone `source`/`confidence`.
+- **Gap analysis del guardaroba** (Fase 8): rete neurale multi-label
+  ([`app/ml/gap_model.py`](../backend/app/ml/gap_model.py)) che individua i
+  vuoti funzionali dai dati aggregati. Dataset tabellare sintetico
+  ([`build_wardrobe_dataset.py`](../backend/scripts/build_wardrobe_dataset.py)),
+  training ([`train_gap_model.py`](../backend/scripts/train_gap_model.py),
+  Micro-F1 ~0.94), servizio
+  ([`gap_analysis.py`](../backend/app/services/gap_analysis.py)) con fallback
+  a regole, endpoint `/stats/gap-analysis` + card in dashboard. Vedi ADR-011.
+
+### Diagnosi stato (segue)
+
   - VLM+LoRA (Approccio C) — **integrazione production-ready**:
     routing a cascata in `services/condition.py`
     (`CLOSETAI_CONDITION_BACKEND` = auto/vlm-lora/clip-mlp/heuristic) con

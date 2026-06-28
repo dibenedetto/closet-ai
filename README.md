@@ -188,6 +188,23 @@ eseguibili separatamente (`fetch_real_garments.py`,
 
 Dettagli e requisiti hardware in [docs/architecture.md](docs/architecture.md) (ADR-010).
 
+## Gap analysis del guardaroba (rete neurale tabellare)
+
+Una seconda rete neurale addestrata da noi che, dai **dati aggregati** del
+guardaroba (non dalle foto), individua i **vuoti funzionali** ("manca un
+capospalla", "troppe t-shirt") e suggerisce acquisti consapevoli —
+*Fashion-CLIP riconosce i capi, questa rete trova i vuoti*.
+
+```bash
+cd backend
+uv run python scripts/build_wardrobe_dataset.py --rows 5000   # dataset tabellare
+uv run python scripts/train_gap_model.py                      # addestra l'MLP multi-label
+```
+
+I pesi (`ml/weights/gap_model.pt`) alimentano `GET /stats/gap-analysis` e la
+card "🧩 Analisi guardaroba" nella dashboard. Senza pesi, il backend usa le
+regole esperte (fallback). Dettagli in [docs/architecture.md](docs/architecture.md) (ADR-011).
+
 ## Stato
 
 Vedi [PLAN.md](PLAN.md) per lo stato dei task e la roadmap completa.

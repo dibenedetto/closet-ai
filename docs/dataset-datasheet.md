@@ -168,6 +168,33 @@ mantenendo le degradazioni sintetiche come *augmentation*.
 
 ---
 
+## 6.bis · Dataset secondario — Wardrobe Gap Analysis
+
+Oltre al dataset di immagini per lo stato del capo, il progetto usa un
+**secondo dataset tabellare** per la *gap analysis* del guardaroba (ADR-011).
+
+- **Generatore**: [`scripts/build_wardrobe_dataset.py`](../backend/scripts/build_wardrobe_dataset.py)
+- **Output**: `ml/datasets/wardrobe/wardrobe_dataset.csv`
+- **Una riga = un guardaroba simulato**: 14 feature aggregate (conteggi per
+  ruolo, frazioni, colori, ghost-ratio) + 6 label binarie (vuoti
+  funzionali) + profilo.
+- **Categorie ispirate a DeepFashion**: la tassonomia dei capi riprende le
+  categorie/attributi di DeepFashion; i guardaroba sono **simulati** da
+  profili (minimal / balanced / tshirt_heavy / summer_only / formal /
+  random), non estratti da utenti reali.
+- **Etichette**: prodotte da regole esperte (`gap_model.rule_based_gaps`)
+  con rumore di etichettatura (default 8%), così la rete apprende le soglie
+  invece di copiarle.
+- **Modello**: MLP multi-label (vedi `train_gap_model.py`). Metriche
+  baseline: Micro-F1 ~0.94, Hamming loss ~0.04.
+
+**Limite**: come per il dataset immagini, i dati sono **sintetici**. La rete
+è valida quanto le regole con cui sono stati generati i target; per superare
+questo limite servirebbe il feedback reale degli utenti sui suggerimenti
+d'acquisto (segnale che il prototipo non raccoglie ancora).
+
+---
+
 ## 7 · Note etiche
 
 - Nessun dato personale: le immagini sono di capi, non di persone.

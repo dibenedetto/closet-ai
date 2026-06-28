@@ -239,6 +239,8 @@ ml/weights/*
 # Dataset generati / immagini sorgente — rigenerabili via script.
 # Versioniamo solo lo script, la datasheet e il README della cartella source.
 ml/datasets/garment_condition/
+ml/datasets/wardrobe/
+ml/datasets/_cache/
 ml/datasets/source/*
 !ml/datasets/source/README.md
 !ml/datasets/source/.gitkeep

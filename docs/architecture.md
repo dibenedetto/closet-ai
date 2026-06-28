@@ -382,6 +382,63 @@ hardcoded vs distillato.
 
 ---
 
+## ADR-011 — Gap analysis del guardaroba: rete neurale tabellare
+
+**Contesto**: Fashion-CLIP *riconosce* i capi dalle foto, ma non dice nulla
+sulla **composizione** del guardaroba nel suo insieme. L'utente vuole
+acquisti più consapevoli: serve un modello che capisca se l'armadio è
+equilibrato o se ha *vuoti funzionali* (manca un capospalla, troppe
+t-shirt, poche alternative invernali…).
+
+**Decisione**: una **rete neurale multi-label** addestrata da noi che lavora
+su **dati tabellari aggregati** (non sulle immagini):
+
+```
+guardaroba ──▶ feature aggregate (14) ──▶ MLP ──▶ 6 vuoti funzionali (multi-label)
+   (DB)        conteggi, colori,                   sigmoid + soglia
+               stagionalità, ghost-ratio
+```
+
+- **Feature** (`gap_model.FEATURE_NAMES`): conteggi per macro-ruolo
+  (top/bottom/outerwear/shoes/dress/accessory), totale, frazioni
+  (t-shirt, capispalla, invernali, formali), n. colori, presenza neutri,
+  ghost-ratio.
+- **Label** (`GAP_LABELS`): `manca_capospalla`, `manca_scarpe`,
+  `manca_formale`, `manca_invernale`, `troppe_tshirt`, `poca_varieta_colori`.
+- **Modello**: MLP `14 → 64 → 32 → 6`, BCEWithLogits, multi-label.
+
+**Dataset**: tabellare **sintetico**, generato da
+`scripts/build_wardrobe_dataset.py` campionando profili di guardaroba
+realistici (minimal / balanced / tshirt_heavy / summer_only / formal /
+random). Le categorie sono **ispirate a DeepFashion**; le etichette sono
+prodotte da regole esperte (`rule_based_gaps`) con rumore di
+etichettatura (8%), così la rete apprende le soglie invece di memorizzarle.
+
+**Risultati** (5000 righe, split 70/15/15):
+
+| Metrica            | Valore  |
+| ------------------ | ------- |
+| Micro-F1           | ~0.94   |
+| Macro-F1           | ~0.93   |
+| Hamming loss       | ~0.04   |
+| Subset accuracy    | ~0.78   |
+
+**Integrazione**: `services/gap_analysis.py` aggrega il guardaroba **reale**
+(query `Item` + `WearEvent`, esclude i capi ritirati), calcola le stesse
+feature e predice con la rete. Endpoint `GET /stats/gap-analysis` →
+vuoti + raccomandazioni (con preferenza per il second-hand), mostrati nella
+dashboard. **Fallback fail-safe**: se i pesi non esistono, usa le stesse
+`rule_based_gaps` (output `source: "rules"` invece di `"neural-net"`).
+
+**Perché "rules" come ground-truth e fallback**: le regole sono la
+conoscenza esperta che vogliamo che la rete apprenda; usarle anche come
+fallback garantisce che la feature funzioni *sempre*, anche senza pesi
+addestrati. Onestà: su dati reali la rete è limitata dalla qualità delle
+regole con cui è stata generata; per andare oltre servirebbe feedback reale
+degli utenti sui suggerimenti.
+
+---
+
 ## Layout dei moduli ML / AI
 
 ```
@@ -403,13 +460,19 @@ backend/app/ml/
     ├── classifier.py       # Fashion-CLIP (+ embed_image come feature extractor)
     ├── color.py
     ├── condition_model.py  # Approccio A: MLP addestrato da noi (testa su CLIP)
-    └── condition_vlm.py    # Approccio C: inferenza VLM + LoRA (scheletro)
+    ├── condition_vlm.py    # Approccio C: inferenza VLM + LoRA (scheletro)
+    └── gap_model.py        # gap analysis: MLP multi-label su feature tabellari
+
+backend/app/services/
+    └── gap_analysis.py     # feature dal guardaroba reale + predizione gap
 
 backend/scripts/
     ├── build_condition_dataset.py    # genera il dataset (degradazione sintetica)
     ├── fetch_real_garments.py        # scarica capi reali (FashionMNIST)
     ├── train_condition_model.py      # Approccio A: MLP su embedding CLIP
-    └── train_condition_vlm_lora.py   # Approccio C: LoRA su Qwen2-VL
+    ├── train_condition_vlm_lora.py   # Approccio C: LoRA su Qwen2-VL
+    ├── build_wardrobe_dataset.py     # genera il dataset tabellare guardaroba
+    └── train_gap_model.py            # addestra l'MLP multi-label di gap analysis
 ```
 
 L'interfaccia condivisa è la dataclass `ClassificationResult`:

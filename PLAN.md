@@ -184,6 +184,23 @@ Hardware target: GPU locale.
 
 ---
 
+## Fase 8 — Gap analysis del guardaroba (completata)
+
+Obiettivo: una **rete neurale addestrata da noi** che, dai dati aggregati
+del guardaroba (non dalle immagini), individua i **vuoti funzionali** e
+suggerisce acquisti consapevoli. *Fashion-CLIP riconosce i capi, questa rete
+trova i vuoti.* Vedi ADR-011.
+
+- [x] Modulo condiviso `app/ml/gap_model.py` — feature (14), label (6 vuoti), regole esperte, MLP multi-label, inferenza
+- [x] Generatore dataset `scripts/build_wardrobe_dataset.py` — guardaroba sintetici (categorie ispirate a DeepFashion), 6 profili, rumore di etichettatura
+- [x] Training `scripts/train_gap_model.py` — MLP multi-label, BCE, early stopping. **Micro-F1 ~0.94, Hamming loss ~0.04**
+- [x] Servizio `app/services/gap_analysis.py` — feature dal guardaroba reale (DB, esclude ritirati) + predizione rete/regole + raccomandazioni second-hand
+- [x] Endpoint `GET /api/v1/stats/gap-analysis` + schema, fallback `source: rules` se pesi assenti
+- [x] UI: card "🧩 Analisi guardaroba" nella dashboard con vuoti, probabilità e consigli
+- [x] 9 test (feature, regole, endpoint, esclusione ritirati, rete mock)
+
+---
+
 ## Estensioni e idee parcheggiate
 
 - Modalità famiglia / guardaroba condiviso
@@ -191,6 +208,7 @@ Hardware target: GPU locale.
 - Notifiche push per capi non indossati da X tempo
 - Export guardaroba in formato standard (per migrazione tra app)
 - Riconoscimento automatico capi indossati da foto outfit (multi-label detection)
+- Feedback reale degli utenti sui suggerimenti di gap analysis (per superare i target sintetici)
 - Suggerimenti di acquisto solo se manca davvero qualcosa nel guardaroba (gap analysis)
 
 ---

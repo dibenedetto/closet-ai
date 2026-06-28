@@ -511,6 +511,40 @@ quando non ce ne sono altre sullo stesso capo, il capo viene **riattivato**
 
 ---
 
+### `GET /stats/gap-analysis`
+
+Analizza la composizione del guardaroba con una **rete neurale** addestrata
+(fallback a regole esperte se i pesi non ci sono) e individua i **vuoti
+funzionali** con raccomandazioni d'acquisto consapevole. Esclude i capi
+ritirati. Vedi ADR-011.
+
+**Risposta `200`** — `GapAnalysis`:
+
+```json
+{
+  "total_items": 13,
+  "counts_by_category": { "t-shirt": 12, "jeans": 1 },
+  "n_colors": 1,
+  "has_neutral": false,
+  "ghost_ratio": 0.0,
+  "balanced": false,
+  "source": "neural-net",
+  "gaps": [
+    {
+      "code": "manca_capospalla",
+      "label": "Manca un capospalla (giacca o cappotto)",
+      "advice": "Cerca una giacca o un cappotto versatile, meglio se second-hand…",
+      "probability": 1.0
+    }
+  ]
+}
+```
+
+`source` è `"neural-net"` quando risponde la rete, `"rules"` col fallback.
+`probability` è valorizzata solo dalla rete.
+
+---
+
 ### `GET /stats/impact`
 
 Statistiche aggregate del modulo circolare.
