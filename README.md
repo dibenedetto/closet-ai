@@ -191,8 +191,8 @@ Dettagli e requisiti hardware in [docs/architecture.md](docs/architecture.md) (A
 ## Gap analysis del guardaroba (rete neurale tabellare)
 
 Una seconda rete neurale addestrata da noi che, dai **dati aggregati** del
-guardaroba (non dalle foto), individua i **vuoti funzionali** ("manca un
-capospalla", "troppe t-shirt") e suggerisce acquisti consapevoli —
+guardaroba (non dalle foto), individua i **vuoti funzionali** ("manca una
+giacca", "troppe t-shirt") e suggerisce acquisti consapevoli —
 *Fashion-CLIP riconosce i capi, questa rete trova i vuoti*.
 
 ```bash

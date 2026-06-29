@@ -532,7 +532,7 @@ ritirati. Vedi ADR-011.
   "gaps": [
     {
       "code": "manca_capospalla",
-      "label": "Manca un capospalla (giacca o cappotto)",
+      "label": "Manca una giacca o un cappotto",
       "advice": "Cerca una giacca o un cappotto versatile, meglio se second-hand…",
       "probability": 1.0
     }

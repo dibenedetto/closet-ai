@@ -526,7 +526,7 @@ def slide_07b_ai_pipeline(prs: Presentation, page: int) -> None:
             ("Rete gap analysis", {"size": 15, "bold": True, "color": INK, "space_after": 2}),
             ("addestrata da noi · non guarda le foto, guarda l'inventario",
              {"size": 10, "italic": True, "color": GREEN, "space_after": 6}),
-            ("→ vuoti funzionali: \"manca un capospalla\", \"troppe t-shirt\"",
+            ("→ vuoti funzionali: \"manca una giacca\", \"troppe t-shirt\"",
              {"size": 12, "color": MUTED}),
         ],
     )

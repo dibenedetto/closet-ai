@@ -3,7 +3,7 @@
 Mentre Fashion-CLIP *riconosce* i capi dalle foto, questo modello lavora a
 un livello superiore: dai **dati aggregati** del guardaroba (quanti capi
 per categoria, copertura colori, stagionalità, frequenza d'uso) predice i
-**vuoti funzionali** — es. "manca un capospalla", "troppe t-shirt", "poche
+**vuoti funzionali** — es. "manca una giacca/cappotto", "troppe t-shirt", "poche
 alternative invernali".
 
 Architettura: MLP **multi-label** (un guardaroba può avere più vuoti
@@ -70,7 +70,7 @@ GAP_LABELS = (
 
 # Etichette leggibili per la UI.
 GAP_HUMAN = {
-    "manca_capospalla": "Manca un capospalla (giacca o cappotto)",
+    "manca_capospalla": "Manca una giacca o un cappotto",
     "manca_scarpe": "Poche scarpe per variare",
     "manca_formale": "Mancano capi formali / eleganti",
     "manca_invernale": "Poche alternative invernali",

@@ -122,7 +122,7 @@ LIVELLO CAPO  ·  per ogni foto caricata
 LIVELLO GUARDAROBA  ·  sull'insieme dei capi
 ══════════════════════════════════════════════════════════════════════════
    conteggi categorie,    ┌──────────────────────────────┐   vuoti funzionali
-   colori, stagioni,  ───▶│ Rete gap analysis (addestrata)│──▶ (manca capospalla,
+   colori, stagioni,  ───▶│ Rete gap analysis (addestrata)│──▶ (manca una giacca,
    frequenza d'uso        └──────────────────────────────┘    troppe t-shirt…)
 
    azioni circolari    ┌──────────────────────────────┐   CO₂ totale evitata

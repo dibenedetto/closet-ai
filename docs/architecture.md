@@ -387,7 +387,7 @@ hardcoded vs distillato.
 **Contesto**: Fashion-CLIP *riconosce* i capi dalle foto, ma non dice nulla
 sulla **composizione** del guardaroba nel suo insieme. L'utente vuole
 acquisti più consapevoli: serve un modello che capisca se l'armadio è
-equilibrato o se ha *vuoti funzionali* (manca un capospalla, troppe
+equilibrato o se ha *vuoti funzionali* (manca una giacca/cappotto, troppe
 t-shirt, poche alternative invernali…).
 
 **Decisione**: una **rete neurale multi-label** addestrata da noi che lavora
@@ -401,7 +401,7 @@ guardaroba ──▶ feature aggregate (14) ──▶ MLP ──▶ 6 vuoti funz
 
 - **Feature** (`gap_model.FEATURE_NAMES`): conteggi per macro-ruolo
   (top/bottom/outerwear/shoes/dress/accessory), totale, frazioni
-  (t-shirt, capispalla, invernali, formali), n. colori, presenza neutri,
+  (t-shirt, giacche/cappotti, invernali, formali), n. colori, presenza neutri,
   ghost-ratio.
 - **Label** (`GAP_LABELS`): `manca_capospalla`, `manca_scarpe`,
   `manca_formale`, `manca_invernale`, `troppe_tshirt`, `poca_varieta_colori`.
