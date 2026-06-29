@@ -99,31 +99,41 @@ dell'AI, soddisfacendo i requisiti didattici del corso.
 
 ### 4.3 Pipeline AI: come i modelli lavorano insieme
 
-I modelli AI non sono isolati: formano una **catena su due livelli**. Al
-*livello del capo* ogni foto viene interpretata da più modelli; al *livello
-del guardaroba* i dati prodotti si aggregano e alimentano altri modelli.
+I modelli e le logiche AI non sono isolati: formano una **catena su tre
+livelli**. Al *livello del capo* ogni foto viene interpretata da più modelli;
+al *livello dell'uso* il tracciamento nel tempo produce metriche; al *livello
+del guardaroba* tutto si aggrega e alimenta altri modelli.
 
 ```
 LIVELLO CAPO  ·  per ogni foto caricata
 ══════════════════════════════════════════════════════════════════════════
-                       ┌──────────────────────────────┐
-                  ┌───▶│ Fashion-CLIP  (pre-addestrato)│──▶ categoria + colore
-                  │    └──────────────────────────────┘
+                       ┌──────────────────────────────┐  categoria + colore
+                  ┌───▶│ Fashion-CLIP  (pre-addestrato)│──▶ (+ embedding visivo,
+                  │    └──────────────────────────────┘    usato dal recommender)
    📷  foto del   │    ┌──────────────────────────────┐    stato del capo
        capo  ─────┼───▶│ Rete stato  (addestrata da noi)│──▶ (nuovo/usurato/
                   │    │   + VLM → tutorial            │    danneggiato)
                   │    └──────────────────────────────┘──▶ tutorial di recupero
                   │    ┌──────────────────────────────┐
-                  └───▶│ Tabella CO₂  (Ellen MacArthur)│──▶ impatto energetico
-                       └──────────────────────────────┘    del singolo capo
-                                       │
-              i dati etichettati di ogni capo si accumulano nel guardaroba
-                                       ▼
+                  └───▶│ Tabella CO₂  (Ellen MacArthur)│──▶ impatto di produzione
+                       └──────────────────────────────┘
+
+LIVELLO USO  ·  tracciamento nel tempo
+══════════════════════════════════════════════════════════════════════════
+   ✓ "indossato        ┌──────────────────────────────┐   cost-per-wear
+     oggi"  ──────────▶│ Wear log  (conteggio utilizzi)│──▶ (prezzo ÷ n. utilizzi)
+     (un tap)          └──────────────────────────────┘──▶ capi "fantasma"
+                                                            (mai indossati > N giorni)
+
 LIVELLO GUARDAROBA  ·  sull'insieme dei capi
 ══════════════════════════════════════════════════════════════════════════
-   conteggi categorie,    ┌──────────────────────────────┐   vuoti funzionali
-   colori, stagioni,  ───▶│ Rete gap analysis (addestrata)│──▶ (manca una giacca,
-   frequenza d'uso        └──────────────────────────────┘    troppe t-shirt…)
+   capi posseduti      ┌──────────────────────────────┐   "cosa metto oggi?"
+   + 🌦 meteo  ───────▶│ Outfit recommender (regole+AI) │──▶ 3 proposte di outfit
+                       └──────────────────────────────┘
+
+   conteggi categorie, ┌──────────────────────────────┐   vuoti funzionali
+   colori, uso  ───────▶│ Rete gap analysis (addestrata)│──▶ (manca una giacca,
+                       └──────────────────────────────┘    troppe t-shirt…)
 
    azioni circolari    ┌──────────────────────────────┐   CO₂ totale evitata
    eseguite        ───▶│ Somma impatti × % evitamento │──▶ (dashboard impatto)
@@ -133,21 +143,29 @@ LIVELLO GUARDAROBA  ·  sull'insieme dei capi
 **Lettura della catena**:
 
 1. **Fashion-CLIP** (pre-addestrato) percepisce il *singolo* capo dalla foto
-   e lo etichetta (categoria, colore). Risponde a *"cos'è questo capo?"*.
+   e lo etichetta (categoria, colore); produce anche un **embedding visivo**
+   riusato per la varietà degli outfit. Risponde a *"cos'è questo capo?"*.
 2. La **rete dello stato** (addestrata da noi) valuta l'usura dalla stessa
    foto; nella variante VLM produce anche il **tutorial di recupero**.
-3. La **tabella CO₂** stima l'impatto energetico di produzione del capo.
-4. Le etichette di *tutti* i capi si sommano: la **rete di gap analysis**
+3. La **tabella CO₂** stima l'impatto di produzione del capo.
+4. Ogni "indossato oggi" alimenta il **wear log**: da lì il sistema calcola
+   il **cost-per-wear** (quanto ti è costato a utilizzo) e identifica i
+   **capi fantasma** — quelli mai indossati dopo un certo periodo.
+5. L'**outfit recommender** combina i capi posseduti con il **meteo** e le
+   regole estetiche (compatibilità di colore + similarità sugli embedding)
+   per proporre *"cosa metto oggi?"*.
+6. Le etichette di *tutti* i capi si sommano: la **rete di gap analysis**
    (addestrata da noi) ragiona sulla **collezione** e trova i vuoti —
    risponde a *"cosa manca nell'armadio?"*. Non guarda le foto: guarda
    l'inventario che Fashion-CLIP ha prodotto.
-5. Le azioni circolari eseguite alimentano il calcolo della **CO₂ evitata**
+7. Le azioni circolari eseguite alimentano il calcolo della **CO₂ evitata**
    mostrata nella dashboard.
 
-In sintesi: **Fashion-CLIP riconosce i capi uno per uno; le reti addestrate
-da noi diagnosticano lo stato del singolo e analizzano l'equilibrio
-dell'intero guardaroba**. Percezione del dettaglio e ragionamento
-sull'insieme sono due livelli distinti ma collegati dal flusso dei dati.
+In sintesi: **Fashion-CLIP riconosce i capi uno per uno; il tracciamento
+d'uso ne misura il valore reale; le reti addestrate da noi diagnosticano lo
+stato del singolo e analizzano l'equilibrio dell'intero guardaroba**.
+Percezione del dettaglio, comportamento nel tempo e ragionamento
+sull'insieme sono livelli distinti ma collegati dal flusso dei dati.
 
 ---
 

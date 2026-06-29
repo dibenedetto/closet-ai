@@ -479,69 +479,51 @@ def slide_07b_ai_pipeline(prs: Presentation, page: int) -> None:
     _add_slide_title(
         slide, "Come lavorano insieme i modelli AI.",
         kicker="05b · La pipeline",
-        subtitle="Blu = pre-addestrato · Verde = rete addestrata da noi. Due livelli collegati dai dati.",
+        subtitle="Blu = pre-addestrato · Verde = addestrato da noi · Giallo = regole. Tre livelli collegati dai dati.",
     )
 
-    # ── Fascia 1: per ogni capo ──────────────────────────────────────────
-    _add_textbox(slide, Inches(0.6), Inches(1.95), Inches(12), Inches(0.35),
-                 "📷  PER OGNI CAPO · dalla foto", size=12, bold=True, color=INK)
-
-    capo_boxes = [
-        ("Fashion-CLIP", "pre-addestrato", "→ categoria + colore", ACCENT, ACCENT_SOFT),
-        ("Rete stato + tutorial", "addestrata da noi", "→ nuovo / usurato /\ndanneggiato\n→ tutorial di recupero", GREEN, GREEN_SOFT),
-        ("Tabella CO₂", "Ellen MacArthur", "→ impatto energetico\ndel singolo capo", WARN, PANEL),
-    ]
     box_w = Inches(4.0)
-    for i, (title, kind, out, color, soft) in enumerate(capo_boxes):
-        x = Inches(0.6) + (box_w + Inches(0.17)) * i
-        card = _add_card(slide, x, Inches(2.35), box_w, Inches(1.9), fill=soft, line=color)
-        _set_card_text(
-            card,
-            [
-                (title, {"size": 15, "bold": True, "color": INK, "space_after": 2}),
-                (kind, {"size": 10, "italic": True, "color": color, "space_after": 8}),
-                (out, {"size": 12, "color": MUTED}),
-            ],
-        )
+    gap = Inches(0.17)
 
-    # freccia "i dati si accumulano"
-    arrow = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.3), Inches(4.35),
-                                   Inches(0.7), Inches(0.45))
-    arrow.fill.solid()
-    arrow.fill.fore_color.rgb = INK
-    arrow.line.fill.background()
-    _add_textbox(slide, Inches(7.1), Inches(4.42), Inches(6), Inches(0.4),
-                 "le etichette di ogni capo si accumulano nel guardaroba",
-                 size=11, italic=True, color=MUTED)
+    def row_of_three(y, boxes):
+        for i, (title, kind, out, color, soft) in enumerate(boxes):
+            x = Inches(0.6) + (box_w + gap) * i
+            card = _add_card(slide, x, y, box_w, Inches(1.25), fill=soft, line=color)
+            _set_card_text(
+                card,
+                [
+                    (title, {"size": 13, "bold": True, "color": INK, "space_after": 1}),
+                    (kind, {"size": 9, "italic": True, "color": color, "space_after": 4}),
+                    (out, {"size": 10.5, "color": MUTED}),
+                ],
+            )
 
-    # ── Fascia 2: su tutto il guardaroba ─────────────────────────────────
-    _add_textbox(slide, Inches(0.6), Inches(4.95), Inches(12), Inches(0.35),
-                 "🧩  SU TUTTO IL GUARDAROBA · sull'insieme dei capi", size=12, bold=True, color=INK)
+    # ── Livello 1: per ogni capo ─────────────────────────────────────────
+    _add_textbox(slide, Inches(0.6), Inches(1.8), Inches(12), Inches(0.3),
+                 "📷  PER OGNI CAPO · dalla foto", size=11, bold=True, color=INK)
+    row_of_three(Inches(2.1), [
+        ("Fashion-CLIP", "pre-addestrato", "→ categoria + colore (+ embedding)", ACCENT, ACCENT_SOFT),
+        ("Rete stato + tutorial", "addestrata da noi", "→ nuovo/usurato/danneggiato\n→ tutorial di recupero", GREEN, GREEN_SOFT),
+        ("Tabella CO₂", "Ellen MacArthur", "→ impatto di produzione", WARN, PANEL),
+    ])
 
-    g1 = _add_card(slide, Inches(0.6), Inches(5.35), Inches(6.05), Inches(1.4),
-                   fill=GREEN_SOFT, line=GREEN)
-    _set_card_text(
-        g1,
-        [
-            ("Rete gap analysis", {"size": 15, "bold": True, "color": INK, "space_after": 2}),
-            ("addestrata da noi · non guarda le foto, guarda l'inventario",
-             {"size": 10, "italic": True, "color": GREEN, "space_after": 6}),
-            ("→ vuoti funzionali: \"manca una giacca\", \"troppe t-shirt\"",
-             {"size": 12, "color": MUTED}),
-        ],
-    )
-    g2 = _add_card(slide, Inches(6.85), Inches(5.35), Inches(6.05), Inches(1.4),
-                   fill=GREEN_SOFT, line=GREEN)
-    _set_card_text(
-        g2,
-        [
-            ("Somma impatti evitati", {"size": 15, "bold": True, "color": INK, "space_after": 2}),
-            ("azioni circolari × % di CO₂ risparmiata",
-             {"size": 10, "italic": True, "color": GREEN, "space_after": 6}),
-            ("→ CO₂ totale evitata, mostrata nella dashboard impatto",
-             {"size": 12, "color": MUTED}),
-        ],
-    )
+    # ── Livello 2: uso nel tempo ─────────────────────────────────────────
+    _add_textbox(slide, Inches(0.6), Inches(3.5), Inches(12), Inches(0.3),
+                 "✓  USO NEL TEMPO · un tap 'indossato oggi'", size=11, bold=True, color=INK)
+    row_of_three(Inches(3.8), [
+        ("Wear log", "conteggio utilizzi", "→ quante volte l'hai indossato", ACCENT, ACCENT_SOFT),
+        ("Cost-per-wear", "calcolo", "→ prezzo ÷ n. utilizzi", WARN, PANEL),
+        ("Capi fantasma", "regola soglia", "→ mai indossati > N giorni", WARN, PANEL),
+    ])
+
+    # ── Livello 3: tutto il guardaroba ───────────────────────────────────
+    _add_textbox(slide, Inches(0.6), Inches(5.2), Inches(12), Inches(0.3),
+                 "🧩  TUTTO IL GUARDAROBA · sull'insieme", size=11, bold=True, color=INK)
+    row_of_three(Inches(5.5), [
+        ("Outfit recommender", "regole + AI + 🌦 meteo", "→ \"cosa metto oggi?\" · 3 proposte", ACCENT, ACCENT_SOFT),
+        ("Rete gap analysis", "addestrata da noi", "→ vuoti: \"manca una giacca\"", GREEN, GREEN_SOFT),
+        ("Somma impatti evitati", "azioni × % CO₂", "→ CO₂ totale → dashboard", GREEN, GREEN_SOFT),
+    ])
     _add_footer(slide, page)
 
 
