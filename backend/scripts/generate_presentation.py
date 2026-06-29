@@ -159,7 +159,7 @@ def _add_slide_title(slide, title: str, kicker: str | None = None,
     underline.line.fill.background()
 
 
-TOTAL_PAGES = 14
+TOTAL_PAGES = 15
 
 
 def _add_footer(slide, page_num: int) -> None:
@@ -469,6 +469,77 @@ def slide_07_ai_map(prs: Presentation, page: int) -> None:
              {"size": 13, "color": GREEN, "space_after": 6}),
             ("Questa distinzione era proprio quello che il corso ci chiedeva di dimostrare.",
              {"size": 12, "color": MUTED, "italic": True}),
+        ],
+    )
+    _add_footer(slide, page)
+
+
+def slide_07b_ai_pipeline(prs: Presentation, page: int) -> None:
+    slide = _new_slide(prs)
+    _add_slide_title(
+        slide, "Come lavorano insieme i modelli AI.",
+        kicker="05b · La pipeline",
+        subtitle="Blu = pre-addestrato · Verde = rete addestrata da noi. Due livelli collegati dai dati.",
+    )
+
+    # ── Fascia 1: per ogni capo ──────────────────────────────────────────
+    _add_textbox(slide, Inches(0.6), Inches(1.95), Inches(12), Inches(0.35),
+                 "📷  PER OGNI CAPO · dalla foto", size=12, bold=True, color=INK)
+
+    capo_boxes = [
+        ("Fashion-CLIP", "pre-addestrato", "→ categoria + colore", ACCENT, ACCENT_SOFT),
+        ("Rete stato + tutorial", "addestrata da noi", "→ nuovo / usurato /\ndanneggiato\n→ tutorial di recupero", GREEN, GREEN_SOFT),
+        ("Tabella CO₂", "Ellen MacArthur", "→ impatto energetico\ndel singolo capo", WARN, PANEL),
+    ]
+    box_w = Inches(4.0)
+    for i, (title, kind, out, color, soft) in enumerate(capo_boxes):
+        x = Inches(0.6) + (box_w + Inches(0.17)) * i
+        card = _add_card(slide, x, Inches(2.35), box_w, Inches(1.9), fill=soft, line=color)
+        _set_card_text(
+            card,
+            [
+                (title, {"size": 15, "bold": True, "color": INK, "space_after": 2}),
+                (kind, {"size": 10, "italic": True, "color": color, "space_after": 8}),
+                (out, {"size": 12, "color": MUTED}),
+            ],
+        )
+
+    # freccia "i dati si accumulano"
+    arrow = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.3), Inches(4.35),
+                                   Inches(0.7), Inches(0.45))
+    arrow.fill.solid()
+    arrow.fill.fore_color.rgb = INK
+    arrow.line.fill.background()
+    _add_textbox(slide, Inches(7.1), Inches(4.42), Inches(6), Inches(0.4),
+                 "le etichette di ogni capo si accumulano nel guardaroba",
+                 size=11, italic=True, color=MUTED)
+
+    # ── Fascia 2: su tutto il guardaroba ─────────────────────────────────
+    _add_textbox(slide, Inches(0.6), Inches(4.95), Inches(12), Inches(0.35),
+                 "🧩  SU TUTTO IL GUARDAROBA · sull'insieme dei capi", size=12, bold=True, color=INK)
+
+    g1 = _add_card(slide, Inches(0.6), Inches(5.35), Inches(6.05), Inches(1.4),
+                   fill=GREEN_SOFT, line=GREEN)
+    _set_card_text(
+        g1,
+        [
+            ("Rete gap analysis", {"size": 15, "bold": True, "color": INK, "space_after": 2}),
+            ("addestrata da noi · non guarda le foto, guarda l'inventario",
+             {"size": 10, "italic": True, "color": GREEN, "space_after": 6}),
+            ("→ vuoti funzionali: \"manca un capospalla\", \"troppe t-shirt\"",
+             {"size": 12, "color": MUTED}),
+        ],
+    )
+    g2 = _add_card(slide, Inches(6.85), Inches(5.35), Inches(6.05), Inches(1.4),
+                   fill=GREEN_SOFT, line=GREEN)
+    _set_card_text(
+        g2,
+        [
+            ("Somma impatti evitati", {"size": 15, "bold": True, "color": INK, "space_after": 2}),
+            ("azioni circolari × % di CO₂ risparmiata",
+             {"size": 10, "italic": True, "color": GREEN, "space_after": 6}),
+            ("→ CO₂ totale evitata, mostrata nella dashboard impatto",
+             {"size": 12, "color": MUTED}),
         ],
     )
     _add_footer(slide, page)
@@ -827,6 +898,7 @@ def build() -> Path:
         slide_05_demo_home,
         slide_06_demo_today_dashboard,
         slide_07_ai_map,
+        slide_07b_ai_pipeline,
         slide_08_workflow_genai,
         slide_09a_ml_pretrained,
         slide_09b_ml_trained,
