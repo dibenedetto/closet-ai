@@ -38,6 +38,24 @@
 
 ## Scaletta (8-10 minuti)
 
+> **Filo narrativo** — la presentazione (`docs/presentation.pptx`) racconta
+> il **ciclo di vita di un capo** in 6 tappe, ognuna con doppia lente
+> 👤 utente / ⚙️ tecnico. La demo live segue le stesse tappe: mostra la
+> slide, poi fai l'azione corrispondente nell'app.
+>
+> | Tappa (slide) | Storia | Demo live |
+> | --- | --- | --- |
+> | 1 · «L'ho comprato» | lo fotografo → riconoscimento | §1–2 (guardaroba + aggiungi capo) |
+> | 2 · «L'ho indossato» | tracking uso | §3 (wear log + cost-per-wear) |
+> | 3 · «Cosa metto oggi?» | recommender | §4 (`/today`) |
+> | 4 · «Si è rovinato» | stato + tutorial | §6 (modulo circolare) |
+> | 5 · «Mi serve altro?» | gap analysis | §5 (dashboard → card "Analisi guardaroba") |
+> | 6 · «Lo lascio andare» | azione circolare + CO₂ | §6 (esegui azione) → §5 (impatto) |
+>
+> Ricorda il **codice colore delle 4 nature** (slide legenda + pipeline):
+> 🟦 pre-addestrata (Fashion-CLIP) · 🟩 nostra (stato, gap) · 🟪 generativa
+> (tutorial, descrizioni, try-on) · 🟨 regole (cost-per-wear, CO₂).
+
 ### 0. Apertura (30s)
 
 > "Ogni anno in Europa buttiamo via 5 milioni di tonnellate di vestiti,

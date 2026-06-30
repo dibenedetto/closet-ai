@@ -1,20 +1,24 @@
 """Genera la presentazione PowerPoint di ClosetAI.
 
-Output: ``docs/presentation.pptx`` (~13 slide per ~10 min, italiano).
+Output: ``docs/presentation.pptx`` (~16 slide per ~10-12 min, italiano).
 
-Target: corso di laurea magistrale "Design per l'innovazione sostenibile",
-pre-esame. Tono divulgativo, focus sul **cosa** non sul **come**.
+Target: corso magistrale "Design per l'innovazione sostenibile", pre-esame.
 
-Struttura allineata alla slide del docente:
+**Narrazione**: la presentazione segue una *storia* — il ciclo di vita di un
+capo nel guardaroba di Marco — e a ogni tappa mostra due lenti:
 
-1. Problem setting (sfida sostenibilità)
-2. Workflow IA generativa (prompt & tool, confronto, allucinazioni)
-3. Strumento Machine Learning (modello, obiettivo)
-4. Analisi di sostenibilità (valutazione impatto ambientale)
+    👤  LATO UTENTE   → cosa vede e fa la persona
+    ⚙️  LATO TECNICO  → cosa succede dietro, con la "natura" della tecnologia
 
-+ studio di fattibilità (costi, materiali, scalabilità).
+Le quattro nature dell'AI/logica sono codificate a colori e ricorrono in
+tutta la presentazione:
 
-Uso:
+    🟦  AI PRE-ADDESTRATA   (Fashion-CLIP — riconosce i capi)
+    🟩  AI ALLENATA DA NOI  (rete stato, gap analysis)
+    🟪  AI GENERATIVA       (LLM/VLM/diffusion — testi, tutorial, immagini)
+    🟨  REGOLE / TABELLE    (wear log, cost-per-wear, colore, CO₂)
+
+Uso::
 
     uv run python scripts/generate_presentation.py
 """
@@ -34,25 +38,45 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCREENSHOTS_DIR = ROOT / "docs" / "screenshots"
 OUTPUT_PATH = ROOT / "docs" / "presentation.pptx"
 
-# Palette pulita, leggibile a proiettore.
+# Palette base.
 BG = RGBColor(0xF5, 0xF7, 0xFB)
 INK = RGBColor(0x1A, 0x1D, 0x27)
 MUTED = RGBColor(0x6B, 0x71, 0x82)
-ACCENT = RGBColor(0x4A, 0x6D, 0xDC)
-ACCENT_SOFT = RGBColor(0xE0, 0xE8, 0xFA)
-GREEN = RGBColor(0x2F, 0x8F, 0x6E)
-GREEN_SOFT = RGBColor(0xDC, 0xEF, 0xE7)
-WARN = RGBColor(0xC8, 0x8B, 0x2E)
-DANGER = RGBColor(0xC9, 0x4A, 0x5C)
 PANEL = RGBColor(0xFF, 0xFF, 0xFF)
 BORDER = RGBColor(0xDC, 0xDF, 0xE8)
+DANGER = RGBColor(0xC9, 0x4A, 0x5C)
+
+# Le quattro nature (+ soft per gli sfondi).
+PRE = RGBColor(0x4A, 0x6D, 0xDC)        # 🟦 AI pre-addestrata
+PRE_SOFT = RGBColor(0xE0, 0xE8, 0xFA)
+OWN = RGBColor(0x2F, 0x8F, 0x6E)        # 🟩 AI allenata da noi
+OWN_SOFT = RGBColor(0xDC, 0xEF, 0xE7)
+GEN = RGBColor(0x7A, 0x4F, 0xC4)        # 🟪 AI generativa
+GEN_SOFT = RGBColor(0xEC, 0xE4, 0xF7)
+RULE = RGBColor(0xC8, 0x8B, 0x2E)       # 🟨 regole / tabelle
+RULE_SOFT = RGBColor(0xF6, 0xEC, 0xD8)
+
+# Alias retro-compatibili (alcune slide li usano).
+ACCENT = PRE
+ACCENT_SOFT = PRE_SOFT
+GREEN = OWN
+GREEN_SOFT = OWN_SOFT
+WARN = RULE
+
+CATEGORY = {
+    "pre": ("🟦 AI PRE-ADDESTRATA", PRE, PRE_SOFT),
+    "own": ("🟩 AI ALLENATA DA NOI", OWN, OWN_SOFT),
+    "gen": ("🟪 AI GENERATIVA", GEN, GEN_SOFT),
+    "rule": ("🟨 REGOLE / TABELLE", RULE, RULE_SOFT),
+}
 
 SLIDE_W = Inches(13.333)
 SLIDE_H = Inches(7.5)
+TOTAL_PAGES = 15
 
 
 # ============================================================================
-# Helpers
+# Helpers di basso livello
 # ============================================================================
 
 
@@ -83,25 +107,6 @@ def _add_textbox(slide, left, top, width, height, text, *, size=18, bold=False,
     return box
 
 
-def _add_bullets(slide, left, top, width, height, items: list[tuple[str, int]],
-                 *, base_size=18, color=INK, line_spacing=10):
-    box = slide.shapes.add_textbox(left, top, width, height)
-    tf = box.text_frame
-    tf.word_wrap = True
-    tf.margin_left = Emu(0)
-    for i, (text, level) in enumerate(items):
-        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.level = level
-        p.space_after = Pt(line_spacing)
-        run = p.add_run()
-        bullet = "•" if level == 0 else "›"
-        run.text = f"{bullet}  {text}"
-        run.font.size = Pt(base_size - level * 2)
-        run.font.color.rgb = color if level == 0 else MUTED
-        run.font.name = "Calibri"
-    return box
-
-
 def _add_card(slide, left, top, width, height, *, fill=PANEL, line=BORDER):
     shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     shape.fill.solid()
@@ -111,8 +116,8 @@ def _add_card(slide, left, top, width, height, *, fill=PANEL, line=BORDER):
     shape.shadow.inherit = False
     shape.text_frame.margin_left = Inches(0.18)
     shape.text_frame.margin_right = Inches(0.18)
-    shape.text_frame.margin_top = Inches(0.12)
-    shape.text_frame.margin_bottom = Inches(0.12)
+    shape.text_frame.margin_top = Inches(0.14)
+    shape.text_frame.margin_bottom = Inches(0.14)
     shape.text_frame.text = ""
     return shape
 
@@ -135,43 +140,29 @@ def _set_card_text(shape, lines: list[tuple[str, dict]]) -> None:
 
 def _add_slide_title(slide, title: str, kicker: str | None = None,
                      subtitle: str | None = None) -> None:
-    y = Inches(0.45)
+    y = Inches(0.42)
     if kicker:
-        _add_textbox(
-            slide, Inches(0.6), y, Inches(12), Inches(0.35),
-            kicker.upper(), size=11, bold=True, color=ACCENT,
-        )
-        y += Inches(0.4)
-    _add_textbox(
-        slide, Inches(0.6), y, Inches(12), Inches(0.7),
-        title, size=32, bold=True, color=INK,
-    )
+        _add_textbox(slide, Inches(0.6), y, Inches(12), Inches(0.32),
+                     kicker.upper(), size=11, bold=True, color=PRE)
+        y += Inches(0.38)
+    _add_textbox(slide, Inches(0.6), y, Inches(12), Inches(0.65),
+                 title, size=30, bold=True, color=INK)
     if subtitle:
-        _add_textbox(
-            slide, Inches(0.6), y + Inches(0.7), Inches(12), Inches(0.5),
-            subtitle, size=15, color=MUTED, italic=True,
-        )
+        _add_textbox(slide, Inches(0.6), y + Inches(0.66), Inches(12.2), Inches(0.5),
+                     subtitle, size=14, color=MUTED, italic=True)
     underline = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, Inches(0.6), Inches(1.75), Inches(0.8), Emu(30000)
-    )
+        MSO_SHAPE.RECTANGLE, Inches(0.6), Inches(1.68), Inches(0.8), Emu(30000))
     underline.fill.solid()
-    underline.fill.fore_color.rgb = ACCENT
+    underline.fill.fore_color.rgb = PRE
     underline.line.fill.background()
 
 
-TOTAL_PAGES = 15
-
-
 def _add_footer(slide, page_num: int) -> None:
-    _add_textbox(
-        slide, Inches(0.6), Inches(7.1), Inches(11), Inches(0.3),
-        "ClosetAI · Design per l'innovazione sostenibile · pre-esame",
-        size=9, color=MUTED,
-    )
-    _add_textbox(
-        slide, Inches(11.8), Inches(7.1), Inches(1), Inches(0.3),
-        f"{page_num} / {TOTAL_PAGES}", size=9, color=MUTED, align=PP_ALIGN.RIGHT,
-    )
+    _add_textbox(slide, Inches(0.6), Inches(7.12), Inches(11), Inches(0.3),
+                 "ClosetAI · Design per l'innovazione sostenibile · pre-esame",
+                 size=9, color=MUTED)
+    _add_textbox(slide, Inches(11.8), Inches(7.12), Inches(1), Inches(0.3),
+                 f"{page_num} / {TOTAL_PAGES}", size=9, color=MUTED, align=PP_ALIGN.RIGHT)
 
 
 def _add_screenshot_or_placeholder(slide, left, top, width, height,
@@ -180,20 +171,12 @@ def _add_screenshot_or_placeholder(slide, left, top, width, height,
     if img_path.is_file():
         slide.shapes.add_picture(str(img_path), left, top, width=width, height=height)
         return
-    ph = _add_card(slide, left, top, width, height, fill=ACCENT_SOFT, line=ACCENT)
-    _set_card_text(
-        ph,
-        [
-            ("[ screenshot ]", {"size": 14, "bold": True, "color": ACCENT, "align": PP_ALIGN.CENTER, "space_after": 8}),
-            (filename, {"size": 11, "color": MUTED, "align": PP_ALIGN.CENTER, "space_after": 4}),
-            (caption, {"size": 11, "color": MUTED, "italic": True, "align": PP_ALIGN.CENTER}),
-        ],
-    )
-
-
-# ============================================================================
-# Slides
-# ============================================================================
+    ph = _add_card(slide, left, top, width, height, fill=PRE_SOFT, line=PRE)
+    _set_card_text(ph, [
+        ("[ screenshot ]", {"size": 13, "bold": True, "color": PRE, "align": PP_ALIGN.CENTER, "space_after": 6}),
+        (filename, {"size": 10, "color": MUTED, "align": PP_ALIGN.CENTER, "space_after": 4}),
+        (caption, {"size": 10, "color": MUTED, "italic": True, "align": PP_ALIGN.CENTER}),
+    ])
 
 
 def _new_slide(prs: Presentation):
@@ -202,663 +185,497 @@ def _new_slide(prs: Presentation):
     return slide
 
 
-def slide_01_title(prs: Presentation, page: int) -> None:
+# ============================================================================
+# Helper per le slide-tappa (doppia lente utente / tecnico)
+# ============================================================================
+
+
+def _tappa(prs, page, *, n, kicker, story_title, subtitle,
+           user_lines, tech_categories, tech_lines,
+           screenshot=None, screenshot_caption=""):
+    """Slide a due colonne: 👤 lato utente | ⚙️ lato tecnico (con badge categorie)."""
     slide = _new_slide(prs)
-    # Banda decorativa verticale
-    band = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.3), SLIDE_H
-    )
+    _add_slide_title(slide, story_title, kicker=f"Tappa {n} · {kicker}", subtitle=subtitle)
+
+    col_y = Inches(2.0)
+    col_h = Inches(4.8)
+    left_x = Inches(0.6)
+    right_x = Inches(6.95)
+    col_w = Inches(5.95)
+
+    # ── colonna UTENTE ──
+    _add_textbox(slide, left_x, col_y, col_w, Inches(0.35),
+                 "👤  LATO UTENTE — cosa vede e fa", size=12, bold=True, color=INK)
+    if screenshot:
+        _add_screenshot_or_placeholder(slide, left_x, col_y + Inches(0.45),
+                                       col_w, Inches(4.2), screenshot, screenshot_caption)
+    else:
+        ucard = _add_card(slide, left_x, col_y + Inches(0.45), col_w, Inches(4.1),
+                          fill=PANEL, line=BORDER)
+        _set_card_text(ucard, [(t, o) for t, o in user_lines])
+
+    # ── colonna TECNICO ──
+    _add_textbox(slide, right_x, col_y, col_w, Inches(0.35),
+                 "⚙️  LATO TECNICO — cosa succede dietro", size=12, bold=True, color=INK)
+    tcard = _add_card(slide, right_x, col_y + Inches(0.45), col_w, col_h - Inches(0.65),
+                      fill=PANEL, line=BORDER)
+    lines: list[tuple[str, dict]] = []
+    for cat_key in tech_categories:
+        label, color, _ = CATEGORY[cat_key]
+        lines.append((label, {"size": 12, "bold": True, "color": color, "space_after": 2}))
+    lines.append(("", {"size": 4, "space_after": 2}))
+    for t, o in tech_lines:
+        lines.append((t, o))
+    _set_card_text(tcard, lines)
+
+    _add_footer(slide, page)
+    return slide
+
+
+# ============================================================================
+# Slide
+# ============================================================================
+
+
+def slide_01_title(prs, page):
+    slide = _new_slide(prs)
+    band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.3), SLIDE_H)
     band.fill.solid()
-    band.fill.fore_color.rgb = ACCENT
+    band.fill.fore_color.rgb = PRE
     band.line.fill.background()
 
-    _add_textbox(
-        slide, Inches(0.9), Inches(1.6), Inches(11), Inches(0.5),
-        "PRE-ESAME · PROGETTO AI ECO-SOSTENIBILE", size=12, bold=True, color=ACCENT,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(2.2), Inches(11), Inches(1.4),
-        "ClosetAI", size=80, bold=True, color=INK,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(3.7), Inches(11), Inches(0.6),
-        "Il guardaroba intelligente che ti aiuta a vestire meglio comprando meno.",
-        size=22, color=GREEN, italic=True,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(5.0), Inches(11), Inches(0.4),
-        "Design per l'innovazione sostenibile — Università di Pisa",
-        size=15, color=MUTED,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(5.4), Inches(11), Inches(0.4),
-        "Marco Di Benedetto · A.A. 2025/2026",
-        size=14, color=MUTED,
-    )
+    _add_textbox(slide, Inches(0.9), Inches(1.5), Inches(11), Inches(0.5),
+                 "PRE-ESAME · PRODOTTO AI ECO-SOSTENIBILE", size=12, bold=True, color=PRE)
+    _add_textbox(slide, Inches(0.9), Inches(2.1), Inches(11), Inches(1.4),
+                 "ClosetAI", size=80, bold=True, color=INK)
+    _add_textbox(slide, Inches(0.9), Inches(3.6), Inches(11.5), Inches(0.6),
+                 "Il guardaroba intelligente che ti aiuta a vestire meglio comprando meno.",
+                 size=22, color=OWN, italic=True)
+    _add_textbox(slide, Inches(0.9), Inches(4.7), Inches(11.5), Inches(0.9),
+                 "Una storia in sei tappe — dalla foto di un capo al suo fine vita — "
+                 "raccontata da due punti di vista: chi la usa e cosa c'è dietro.",
+                 size=14, color=MUTED)
+    _add_textbox(slide, Inches(0.9), Inches(5.9), Inches(11), Inches(0.4),
+                 "Design per l'innovazione sostenibile — Università di Pisa", size=15, color=MUTED)
+    _add_textbox(slide, Inches(0.9), Inches(6.3), Inches(11), Inches(0.4),
+                 "Marco Di Benedetto · A.A. 2025/2026", size=14, color=MUTED)
     _ = page
 
 
-def slide_02_problem(prs: Presentation, page: int) -> None:
+def slide_02_problem(prs, page):
     slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Compriamo troppi vestiti.",
-        kicker="01 · La sfida",
-        subtitle="L'industria della moda è una delle più impattanti del pianeta.",
-    )
-
+    _add_slide_title(slide, "Compriamo troppi vestiti.", kicker="01 · La sfida",
+                     subtitle="L'industria della moda è una delle più impattanti del pianeta.")
     kpis = [
-        ("10%", "delle emissioni globali\ndi CO₂", ACCENT),
+        ("10%", "delle emissioni\nglobali di CO₂", PRE),
         ("5 mln", "tonnellate di vestiti\nbuttati in Europa /anno", DANGER),
-        ("7×", "utilizzi medi di un\ncapo fast fashion", WARN),
-        ("40%", "del guardaroba medio\nnon viene mai indossato", DANGER),
+        ("7×", "utilizzi medi di un\ncapo fast fashion", RULE),
+        ("40%", "del guardaroba medio\nmai indossato", DANGER),
     ]
-    for i, (number, caption, color) in enumerate(kpis):
+    for i, (num, cap, color) in enumerate(kpis):
         x = Inches(0.6 + i * 3.1)
         card = _add_card(slide, x, Inches(2.3), Inches(2.9), Inches(2.0))
-        _set_card_text(
-            card,
-            [
-                (number, {"size": 44, "bold": True, "color": color, "align": PP_ALIGN.CENTER, "space_after": 6}),
-                (caption, {"size": 12, "color": MUTED, "align": PP_ALIGN.CENTER}),
-            ],
-        )
-
-    _add_textbox(
-        slide, Inches(0.6), Inches(4.8), Inches(12), Inches(0.5),
-        "A casa nostra, tre comportamenti ricorrenti:",
-        size=18, bold=True,
-    )
-    _add_bullets(
-        slide, Inches(0.6), Inches(5.4), Inches(12), Inches(1.8),
-        [
-            ("Compriamo d'impulso  — non sappiamo davvero cosa abbiamo già", 0),
-            ("Capi 'fantasma'  — vestiti dimenticati nell'armadio, mai indossati", 0),
-            ("Buttiamo invece di riparare, scambiare o donare", 0),
-        ],
-    )
-    _add_footer(slide, page)
-
-
-def slide_03_solution(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Un'app che fa tre cose, insieme.",
-        kicker="02 · La soluzione",
-    )
-
-    pillars = [
-        ("📷", "Digitalizza", "Fotografi un capo: l'app\nlo cataloga in automatico\n(categoria, colore).", ACCENT),
-        ("📊", "Traccia", "Un click per dire\n'l'ho indossato oggi':\ncalcola quanto vale\nogni capo nel tempo.", ACCENT),
-        ("♻️", "Allunga la vita", "Quando un capo è 'stanco',\nti suggerisce di ripararlo,\nscambiarlo, venderlo o donarlo.\nMisura la CO₂ risparmiata.", GREEN),
-    ]
-    for i, (icon, title, body, color) in enumerate(pillars):
-        x = Inches(0.6 + i * 4.2)
-        card = _add_card(slide, x, Inches(2.3), Inches(4.0), Inches(3.6))
-        _set_card_text(
-            card,
-            [
-                (icon, {"size": 42, "color": color, "align": PP_ALIGN.CENTER, "space_after": 4}),
-                (title, {"size": 22, "bold": True, "color": INK, "align": PP_ALIGN.CENTER, "space_after": 10}),
-                (body, {"size": 13, "color": MUTED, "align": PP_ALIGN.CENTER}),
-            ],
-        )
-
-    _add_textbox(
-        slide, Inches(0.6), Inches(6.2), Inches(12), Inches(0.5),
-        "Tutto questo dentro un'unica esperienza, senza dover saltare tra app diverse.",
-        size=14, color=GREEN, italic=True, align=PP_ALIGN.CENTER,
-    )
-    _add_footer(slide, page)
-
-
-def slide_04_user_journey(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Come si usa, in pratica.",
-        kicker="03 · L'esperienza utente",
-    )
-
-    steps = [
-        ("Fotografo", "un nuovo capo\nche ho comprato"),
-        ("L'app riconosce", "categoria e colore\nin automatico"),
-        ("Indosso", "il capo e clicco\n'✓ oggi' nell'app"),
-        ("Chiedo", "'cosa metto oggi?'\nmi propone outfit"),
-        ("Vedo", "il mio impatto\nsulla dashboard"),
-    ]
-    step_w = Inches(2.3)
-    gap = Inches(0.15)
-    start_x = Inches(0.6)
-    for i, (verb, detail) in enumerate(steps):
-        x = start_x + (step_w + gap) * i
-        card = _add_card(slide, x, Inches(2.5), step_w, Inches(2.4),
-                        fill=PANEL, line=BORDER)
-        _set_card_text(
-            card,
-            [
-                (f"{i+1}", {"size": 36, "bold": True, "color": ACCENT, "align": PP_ALIGN.CENTER, "space_after": 4}),
-                (verb, {"size": 16, "bold": True, "color": INK, "align": PP_ALIGN.CENTER, "space_after": 6}),
-                (detail, {"size": 11, "color": MUTED, "align": PP_ALIGN.CENTER}),
-            ],
-        )
-        # Freccia tra step
-        if i < len(steps) - 1:
-            arrow_x = x + step_w + Inches(0.01)
-            arrow = slide.shapes.add_shape(
-                MSO_SHAPE.RIGHT_ARROW, arrow_x, Inches(3.5),
-                Inches(0.13), Inches(0.4),
-            )
-            arrow.fill.solid()
-            arrow.fill.fore_color.rgb = ACCENT
-            arrow.line.fill.background()
-
-    _add_textbox(
-        slide, Inches(0.6), Inches(5.3), Inches(12), Inches(0.5),
-        "Nessun obbligo, nessun questionario. Tutto avviene con foto e tap.",
-        size=14, color=MUTED, italic=True, align=PP_ALIGN.CENTER,
-    )
-
-    # Pagina extra: estensione hardware
-    _add_textbox(
-        slide, Inches(0.6), Inches(6.1), Inches(12), Inches(0.4),
-        "🪞  Estensione opzionale: uno specchio smart in camera mostra orologio, meteo e l'outfit suggerito.",
-        size=13, color=GREEN, italic=True, align=PP_ALIGN.CENTER,
-    )
-    _add_footer(slide, page)
-
-
-def slide_05_demo_home(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Il guardaroba digitale",
-        kicker="04 · Demo · schermata 1",
-        subtitle="In cima trovo subito le metriche chiave del mio armadio.",
-    )
-    _add_screenshot_or_placeholder(
-        slide, Inches(0.6), Inches(2.1), Inches(8.0), Inches(4.7),
-        "01-home.png", "Pagina principale con filtri",
-    )
-    bullets = _add_card(slide, Inches(8.9), Inches(2.1), Inches(4.0), Inches(4.7),
-                       fill=ACCENT_SOFT, line=ACCENT)
+        _set_card_text(card, [
+            (num, {"size": 44, "bold": True, "color": color, "align": PP_ALIGN.CENTER, "space_after": 6}),
+            (cap, {"size": 12, "color": MUTED, "align": PP_ALIGN.CENTER}),
+        ])
+    _add_textbox(slide, Inches(0.6), Inches(4.8), Inches(12), Inches(0.5),
+                 "Tre comportamenti, a casa nostra:", size=18, bold=True)
     _set_card_text(
-        bullets,
+        _add_card(slide, Inches(0.6), Inches(5.4), Inches(12.3), Inches(1.4), fill=PANEL, line=BORDER),
         [
-            ("Cosa si vede:", {"size": 14, "bold": True, "color": ACCENT, "space_after": 10}),
-            ("→ N° capi attivi", {"size": 13, "color": INK, "space_after": 6}),
-            ("→ Utilizzi totali", {"size": 13, "color": INK, "space_after": 6}),
-            ("→ Quanti 'fantasma'", {"size": 13, "color": INK, "space_after": 6}),
-            ("→ Cost-per-wear medio", {"size": 13, "color": INK, "space_after": 12}),
-            ("Filtri per categoria,", {"size": 13, "color": MUTED, "space_after": 2}),
-            ("colore, stato attivo/", {"size": 13, "color": MUTED, "space_after": 2}),
-            ("ritirato + ricerca.", {"size": 13, "color": MUTED, "space_after": 10}),
-            ("Tasto rapido 'indossato", {"size": 13, "color": GREEN, "space_after": 2}),
-            ("oggi' sulla card.", {"size": 13, "color": GREEN}),
-        ],
-    )
+            ("•  Compriamo d'impulso — non sappiamo davvero cosa abbiamo già", {"size": 14, "space_after": 4}),
+            ("•  Capi 'fantasma' — vestiti dimenticati nell'armadio, mai indossati", {"size": 14, "space_after": 4}),
+            ("•  Buttiamo invece di riparare, scambiare o donare", {"size": 14}),
+        ])
     _add_footer(slide, page)
 
 
-def slide_06_demo_today_dashboard(prs: Presentation, page: int) -> None:
+def slide_03_story_intro(prs, page):
     slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Cosa metto oggi? + Dashboard impatto",
-        kicker="04 · Demo · schermate 2 e 3",
-        subtitle="L'AI propone outfit basati sul meteo. La dashboard mostra l'impatto.",
-    )
-    _add_screenshot_or_placeholder(
-        slide, Inches(0.6), Inches(2.1), Inches(6.0), Inches(4.7),
-        "04-today.png", "Proposte outfit del giorno",
-    )
-    _add_screenshot_or_placeholder(
-        slide, Inches(6.9), Inches(2.1), Inches(6.0), Inches(4.7),
-        "05-dashboard.png", "Dashboard impatto sostenibilità",
-    )
-    _add_footer(slide, page)
+    _add_slide_title(slide, "Seguiamo un capo, dalla foto al fine vita.",
+                     kicker="02 · La storia + la legenda",
+                     subtitle="A ogni tappa: cosa fa l'utente e quale tecnologia lavora dietro.")
 
+    # Le 6 tappe in fila
+    tappe = ["📷\nLo fotografo", "✓\nLo indosso", "👗\nCosa metto?",
+             "🛠️\nSi è rovinato", "🧩\nMi serve altro?", "♻️\nLo lascio andare"]
+    tw = Inches(1.95)
+    for i, t in enumerate(tappe):
+        x = Inches(0.6) + (tw + Inches(0.12)) * i
+        card = _add_card(slide, x, Inches(2.05), tw, Inches(1.5), fill=PANEL, line=BORDER)
+        _set_card_text(card, [
+            (f"{i+1}", {"size": 13, "bold": True, "color": PRE, "align": PP_ALIGN.CENTER, "space_after": 2}),
+            (t, {"size": 12, "color": INK, "align": PP_ALIGN.CENTER}),
+        ])
+        if i < len(tappe) - 1:
+            ar = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, x + tw + Inches(0.005),
+                                        Inches(2.65), Inches(0.11), Inches(0.3))
+            ar.fill.solid()
+            ar.fill.fore_color.rgb = PRE
+            ar.line.fill.background()
 
-def slide_07_ai_map(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Dove c'è l'intelligenza artificiale.",
-        kicker="05 · Il cuore del progetto",
-        subtitle="Sette punti del prodotto in cui un modello AI fa il lavoro al posto tuo.",
-    )
-
-    uses = [
-        ("📷", "Riconosce il capo", "Capisce da sola se è una\nt-shirt blu o una giacca\nmarrone.", "Vision"),
-        ("🎨", "Estrae il colore", "Trova il colore dominante\nignorando lo sfondo bianco.", "Vision"),
-        ("👗", "Suggerisce outfit", "Combina i capi che hai\ncon meteo + regole estetiche.", "Regole + AI"),
-        ("🛠️", "Diagnostica la condizione", "Capisce se un capo è nuovo,\nbuono, usurato o danneggiato.", "Regole"),
-        ("✍️", "Descrive il capo", "Scrive una breve descrizione\ndel capo in italiano.", "AI generativa"),
-        ("💬", "Coach sostenibilità", "Ti dà consigli personalizzati\nsul tuo guardaroba.", "AI generativa"),
-        ("📖", "Tutorial riparazione", "Crea istruzioni passo-passo\nper riparare il difetto.", "AI generativa"),
-        ("🪞", "Prova virtuale (try-on)", "Genera un'immagine di te\nche indossi il capo.", "AI generativa"),
+    # Legenda 4 nature
+    _add_textbox(slide, Inches(0.6), Inches(4.0), Inches(12), Inches(0.4),
+                 "Le quattro nature della tecnologia (codice colore in tutta la presentazione):",
+                 size=14, bold=True, color=INK)
+    legend = [
+        ("pre", "Riconosce, da un modello già addestrato da altri.\nEs. Fashion-CLIP riconosce i capi."),
+        ("own", "Una rete che abbiamo addestrato noi.\nEs. stato del capo, vuoti del guardaroba."),
+        ("gen", "Produce contenuti nuovi (testi, immagini).\nEs. tutorial, descrizioni, try-on."),
+        ("rule", "Logica esplicita e trasparente, niente ML.\nEs. cost-per-wear, tabella CO₂."),
     ]
-    col_w = Inches(3.05)
-    row_h = Inches(1.2)
-    start_x = Inches(0.6)
-    start_y = Inches(2.1)
-    gap_x = Inches(0.1)
-    gap_y = Inches(0.12)
-    for i, (icon, title, desc, badge) in enumerate(uses):
-        col = i % 4
-        row = i // 4
-        x = start_x + (col_w + gap_x) * col
-        y = start_y + (row_h + gap_y) * row
-        is_gen = badge == "AI generativa"
-        color = GREEN if is_gen else ACCENT
-        soft = GREEN_SOFT if is_gen else ACCENT_SOFT
-        card = _add_card(slide, x, y, col_w, row_h, fill=soft, line=color)
-        _set_card_text(
-            card,
-            [
-                (f"{icon}  {title}", {"size": 13, "bold": True, "color": INK, "space_after": 2}),
-                (desc, {"size": 10, "color": MUTED, "space_after": 2}),
-                (badge, {"size": 9, "bold": True, "color": color, "italic": True}),
-            ],
-        )
-
-    legend = _add_card(slide, Inches(0.6), Inches(4.8), Inches(12.3), Inches(2.0),
-                      fill=PANEL, line=BORDER)
-    _set_card_text(
-        legend,
-        [
-            ("Due tipi di AI, due ruoli ben distinti:", {"size": 15, "bold": True, "color": INK, "space_after": 8}),
-            ("🟦  AI applicata  → riconoscere, classificare, dare suggerimenti basati su regole.",
-             {"size": 13, "color": ACCENT, "space_after": 4}),
-            ("🟩  AI generativa  → produrre nuovi contenuti (testi, immagini) personalizzati per te.",
-             {"size": 13, "color": GREEN, "space_after": 6}),
-            ("Questa distinzione era proprio quello che il corso ci chiedeva di dimostrare.",
-             {"size": 12, "color": MUTED, "italic": True}),
-        ],
-    )
+    lw = Inches(3.0)
+    for i, (key, desc) in enumerate(legend):
+        label, color, soft = CATEGORY[key]
+        x = Inches(0.6) + (lw + Inches(0.1)) * i
+        card = _add_card(slide, x, Inches(4.5), lw, Inches(2.2), fill=soft, line=color)
+        _set_card_text(card, [
+            (label, {"size": 12, "bold": True, "color": color, "align": PP_ALIGN.CENTER, "space_after": 8}),
+            (desc, {"size": 11, "color": MUTED, "align": PP_ALIGN.CENTER}),
+        ])
     _add_footer(slide, page)
 
 
-def slide_07b_ai_pipeline(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Come lavorano insieme i modelli AI.",
-        kicker="05b · La pipeline",
-        subtitle="Blu = pre-addestrato · Verde = addestrato da noi · Giallo = regole. Tre livelli collegati dai dati.",
+def slide_04_tappa_riconosci(prs, page):
+    _tappa(
+        prs, page, n=1, kicker="«L'ho appena comprato»",
+        story_title="Lo fotografo, l'app lo riconosce.",
+        subtitle="Niente moduli da compilare: basta una foto.",
+        screenshot="01-home.png", screenshot_caption="il guardaroba digitale",
+        user_lines=[
+            ("Marco fotografa un capo nuovo.", {"size": 15, "bold": True, "space_after": 10}),
+            ("In un attimo lo ritrova nel guardaroba", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("digitale, già etichettato con", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("categoria e colore — senza scrivere", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("nulla a mano.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["pre"],
+        tech_lines=[
+            ("Fashion-CLIP", {"size": 15, "bold": True, "space_after": 4}),
+            ("Rete neurale pre-addestrata su 700.000 immagini", {"size": 12, "color": MUTED, "space_after": 2}),
+            ("di moda. Riconosce la categoria (t-shirt, giacca…)", {"size": 12, "color": MUTED, "space_after": 2}),
+            ("e produce un 'embedding' del capo.", {"size": 12, "color": MUTED, "space_after": 10}),
+            ("Perché pre-addestrata e non nostra?", {"size": 12, "bold": True, "color": PRE, "space_after": 2}),
+            ("Riaddestrarla servirebbero decine di migliaia di", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("foto etichettate: la usiamo già pronta.", {"size": 11, "color": MUTED}),
+        ],
     )
+
+
+def slide_05_tappa_indosso(prs, page):
+    _tappa(
+        prs, page, n=2, kicker="«Oggi l'ho messo»",
+        story_title="Lo indosso, l'app tiene il conto.",
+        subtitle="Un solo tap trasforma l'armadio in dati utili.",
+        user_lines=[
+            ("Marco tocca '✓ indossato oggi'.", {"size": 15, "bold": True, "space_after": 10}),
+            ("Col tempo scopre quanto gli costa", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("davvero ogni capo (cost-per-wear) e", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("quali sono i suoi capi 'fantasma' —", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("mai indossati da mesi.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["rule"],
+        tech_lines=[
+            ("Wear log + due calcoli", {"size": 15, "bold": True, "space_after": 6}),
+            ("• cost-per-wear = prezzo ÷ numero di utilizzi", {"size": 12, "color": MUTED, "space_after": 4}),
+            ("• capo fantasma = 0 utilizzi dopo N giorni", {"size": 12, "color": MUTED, "space_after": 10}),
+            ("Perché regole e non una rete?", {"size": 12, "bold": True, "color": RULE, "space_after": 2}),
+            ("Sono formule esatte e trasparenti: una divisione", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("e una soglia. Una rete qui sarebbe inutile e meno", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("affidabile di un conto che torna sempre.", {"size": 11, "color": MUTED}),
+        ],
+    )
+
+
+def slide_06_tappa_outfit(prs, page):
+    _tappa(
+        prs, page, n=3, kicker="«Cosa mi metto oggi?»",
+        story_title="L'app propone l'outfit del giorno.",
+        subtitle="Dai capi che già possiede, non da un catalogo da comprare.",
+        screenshot="04-today.png", screenshot_caption="proposte outfit + meteo",
+        user_lines=[
+            ("Marco chiede aiuto la mattina.", {"size": 15, "bold": True, "space_after": 10}),
+            ("Riceve 3 proposte composte SOLO", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("con i suoi capi, adatte al meteo del", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("giorno, e dà un like a quelle che", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("preferisce.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["rule", "pre"],
+        tech_lines=[
+            ("Recommender: regole + embedding + meteo", {"size": 14, "bold": True, "space_after": 6}),
+            ("• 🟨 regole di colore (complementari, neutri…)", {"size": 12, "color": MUTED, "space_after": 3}),
+            ("• 🟨 filtro meteo via API Open-Meteo", {"size": 12, "color": MUTED, "space_after": 3}),
+            ("• 🟦 l'embedding di Fashion-CLIP dà varietà", {"size": 12, "color": MUTED, "space_after": 10}),
+            ("Un mix: la logica estetica è scritta a mano,", {"size": 11, "italic": True, "color": MUTED, "space_after": 2}),
+            ("ma sfrutta la 'percezione' del modello pre-addestrato.", {"size": 11, "italic": True, "color": MUTED}),
+        ],
+    )
+
+
+def slide_07_tappa_rovinato(prs, page):
+    _tappa(
+        prs, page, n=4, kicker="«Si è rovinato»",
+        story_title="L'app capisce lo stato e spiega come salvarlo.",
+        subtitle="Qui lavorano insieme una rete nostra e l'AI generativa.",
+        user_lines=[
+            ("Marco fotografa un capo logoro.", {"size": 15, "bold": True, "space_after": 10}),
+            ("L'app gli dice se è usurato o", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("danneggiato, e gli propone un", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("tutorial di riparazione scritto su", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("misura per quel capo — invece di", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("buttarlo.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["own", "gen"],
+        tech_lines=[
+            ("Due AI in sequenza", {"size": 15, "bold": True, "space_after": 6}),
+            ("🟩 Rete dello STATO (addestrata da noi)", {"size": 12, "bold": True, "color": OWN, "space_after": 2}),
+            ("dalla foto → nuovo / usurato / danneggiato.", {"size": 11, "color": MUTED, "space_after": 8}),
+            ("🟪 Tutorial GENERATIVO", {"size": 12, "bold": True, "color": GEN, "space_after": 2}),
+            ("un LLM/VLM scrive le istruzioni di riparazione", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("personalizzate sul capo (colore, punto del danno).", {"size": 11, "color": MUTED, "space_after": 8}),
+            ("Riconoscere lo stato = classificare (rete nostra).", {"size": 11, "italic": True, "color": MUTED, "space_after": 2}),
+            ("Scrivere il tutorial = creare testo (generativa).", {"size": 11, "italic": True, "color": MUTED}),
+        ],
+    )
+
+
+def slide_08_tappa_serve(prs, page):
+    _tappa(
+        prs, page, n=5, kicker="«Mi serve davvero qualcosa?»",
+        story_title="L'app legge l'armadio e trova i vuoti.",
+        subtitle="Una rete che ragiona sull'insieme, non sul singolo capo.",
+        user_lines=[
+            ("Prima di comprare, Marco controlla.", {"size": 15, "bold": True, "space_after": 10}),
+            ("L'app gli dice se l'armadio è", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("equilibrato o se ha dei vuoti reali", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("(\"manca una giacca\", \"troppe", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("t-shirt\") e consiglia, se serve,", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("di cercarlo second-hand.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["own"],
+        tech_lines=[
+            ("Rete di gap analysis (addestrata da noi)", {"size": 14, "bold": True, "space_after": 6}),
+            ("Non guarda le foto: guarda l'inventario prodotto", {"size": 12, "color": MUTED, "space_after": 2}),
+            ("da Fashion-CLIP. Input: quanti capi per categoria,", {"size": 12, "color": MUTED, "space_after": 2}),
+            ("colori, stagioni, frequenza d'uso →", {"size": 12, "color": MUTED, "space_after": 2}),
+            ("Output: i vuoti funzionali del guardaroba.", {"size": 12, "color": MUTED, "space_after": 10}),
+            ("Perché una rete e non regole?", {"size": 12, "bold": True, "color": OWN, "space_after": 2}),
+            ("Cattura combinazioni sfumate fra molti fattori,", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("e migliorerà col feedback reale degli utenti.", {"size": 11, "color": MUTED}),
+        ],
+    )
+
+
+def slide_09_tappa_circolare(prs, page):
+    _tappa(
+        prs, page, n=6, kicker="«Non lo uso più»",
+        story_title="L'app lo accompagna a una seconda vita.",
+        subtitle="E misura quanta CO₂ hai risparmiato così.",
+        user_lines=[
+            ("Marco decide il destino del capo.", {"size": 15, "bold": True, "space_after": 10}),
+            ("L'app propone l'azione migliore —", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("riparare, scambiare, vendere,", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("donare o riciclare — e gli mostra", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("quanti kg di CO₂ ha evitato.", {"size": 13, "color": MUTED}),
+        ],
+        tech_categories=["rule"],
+        tech_lines=[
+            ("Tabella CO₂ (Ellen MacArthur Foundation)", {"size": 14, "bold": True, "space_after": 6}),
+            ("impatto del capo × % evitata dall'azione:", {"size": 12, "color": MUTED, "space_after": 4}),
+            ("• donare / vendere / scambiare → 100%", {"size": 12, "color": OWN, "space_after": 3}),
+            ("• riparare → 70%   • riciclare → 30%", {"size": 12, "color": OWN, "space_after": 10}),
+            ("Perché una tabella e non una rete?", {"size": 12, "bold": True, "color": RULE, "space_after": 2}),
+            ("L'impatto CO₂ è già stimato da database LCA", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("autorevoli: meglio un numero citabile e trasparente", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("che una scatola nera.", {"size": 11, "color": MUTED}),
+        ],
+    )
+
+
+def slide_10_dashboard(prs, page):
+    slide = _new_slide(prs)
+    _add_slide_title(slide, "Il premio: vedere il proprio impatto.",
+                     kicker="03 · Il payoff per l'utente",
+                     subtitle="Tutte le tappe convergono in numeri concreti e motivanti.")
+    _add_screenshot_or_placeholder(slide, Inches(0.6), Inches(2.0), Inches(8.0), Inches(4.7),
+                                   "05-dashboard.png", "dashboard impatto")
+    card = _add_card(slide, Inches(8.9), Inches(2.0), Inches(4.0), Inches(4.7),
+                     fill=OWN_SOFT, line=OWN)
+    _set_card_text(card, [
+        ("Cosa vede Marco:", {"size": 14, "bold": True, "color": OWN, "space_after": 8}),
+        ("→ CO₂ evitata, in km auto", {"size": 13, "color": INK, "space_after": 6}),
+        ("→ capi salvati dalla discarica", {"size": 13, "color": INK, "space_after": 6}),
+        ("→ cost-per-wear del guardaroba", {"size": 13, "color": INK, "space_after": 6}),
+        ("→ vuoti da colmare (o no!)", {"size": 13, "color": INK, "space_after": 6}),
+        ("→ coach AI con un consiglio", {"size": 13, "color": INK, "space_after": 12}),
+        ("La sostenibilità diventa", {"size": 12, "italic": True, "color": MUTED, "space_after": 2}),
+        ("misurabile e personale.", {"size": 12, "italic": True, "color": MUTED}),
+    ])
+    _add_footer(slide, page)
+
+
+def slide_11_pipeline(prs, page):
+    slide = _new_slide(prs)
+    _add_slide_title(slide, "Il quadro tecnico, in un colpo d'occhio.",
+                     kicker="04 · Sotto il cofano",
+                     subtitle="Le stesse tappe, ora come pipeline su tre livelli. Colori = le 4 nature.")
 
     box_w = Inches(4.0)
     gap = Inches(0.17)
 
-    def row_of_three(y, boxes):
+    def row(y, boxes):
         for i, (title, kind, out, color, soft) in enumerate(boxes):
             x = Inches(0.6) + (box_w + gap) * i
-            card = _add_card(slide, x, y, box_w, Inches(1.25), fill=soft, line=color)
-            _set_card_text(
-                card,
-                [
-                    (title, {"size": 13, "bold": True, "color": INK, "space_after": 1}),
-                    (kind, {"size": 9, "italic": True, "color": color, "space_after": 4}),
-                    (out, {"size": 10.5, "color": MUTED}),
-                ],
-            )
+            card = _add_card(slide, x, y, box_w, Inches(1.2), fill=soft, line=color)
+            _set_card_text(card, [
+                (title, {"size": 12.5, "bold": True, "color": INK, "space_after": 1}),
+                (kind, {"size": 9, "italic": True, "color": color, "space_after": 4}),
+                (out, {"size": 10, "color": MUTED}),
+            ])
 
-    # ── Livello 1: per ogni capo ─────────────────────────────────────────
-    _add_textbox(slide, Inches(0.6), Inches(1.8), Inches(12), Inches(0.3),
+    _add_textbox(slide, Inches(0.6), Inches(1.78), Inches(12), Inches(0.3),
                  "📷  PER OGNI CAPO · dalla foto", size=11, bold=True, color=INK)
-    row_of_three(Inches(2.1), [
-        ("Fashion-CLIP", "pre-addestrato", "→ categoria + colore (+ embedding)", ACCENT, ACCENT_SOFT),
-        ("Rete stato + tutorial", "addestrata da noi", "→ nuovo/usurato/danneggiato\n→ tutorial di recupero", GREEN, GREEN_SOFT),
-        ("Tabella CO₂", "Ellen MacArthur", "→ impatto di produzione", WARN, PANEL),
+    row(Inches(2.08), [
+        ("Fashion-CLIP", "🟦 pre-addestrata", "→ categoria + colore (+ embedding)", PRE, PRE_SOFT),
+        ("Rete stato + tutorial", "🟩 nostra + 🟪 generativa", "→ stato + tutorial di recupero", OWN, OWN_SOFT),
+        ("Tabella CO₂", "🟨 regole", "→ impatto di produzione", RULE, RULE_SOFT),
     ])
-
-    # ── Livello 2: uso nel tempo ─────────────────────────────────────────
-    _add_textbox(slide, Inches(0.6), Inches(3.5), Inches(12), Inches(0.3),
+    _add_textbox(slide, Inches(0.6), Inches(3.48), Inches(12), Inches(0.3),
                  "✓  USO NEL TEMPO · un tap 'indossato oggi'", size=11, bold=True, color=INK)
-    row_of_three(Inches(3.8), [
-        ("Wear log", "conteggio utilizzi", "→ quante volte l'hai indossato", ACCENT, ACCENT_SOFT),
-        ("Cost-per-wear", "calcolo", "→ prezzo ÷ n. utilizzi", WARN, PANEL),
-        ("Capi fantasma", "regola soglia", "→ mai indossati > N giorni", WARN, PANEL),
+    row(Inches(3.78), [
+        ("Wear log", "🟨 regole", "→ quante volte l'hai indossato", RULE, RULE_SOFT),
+        ("Cost-per-wear", "🟨 calcolo", "→ prezzo ÷ n. utilizzi", RULE, RULE_SOFT),
+        ("Capi fantasma", "🟨 soglia", "→ mai indossati > N giorni", RULE, RULE_SOFT),
     ])
-
-    # ── Livello 3: tutto il guardaroba ───────────────────────────────────
-    _add_textbox(slide, Inches(0.6), Inches(5.2), Inches(12), Inches(0.3),
+    _add_textbox(slide, Inches(0.6), Inches(5.18), Inches(12), Inches(0.3),
                  "🧩  TUTTO IL GUARDAROBA · sull'insieme", size=11, bold=True, color=INK)
-    row_of_three(Inches(5.5), [
-        ("Outfit recommender", "regole + AI + 🌦 meteo", "→ \"cosa metto oggi?\" · 3 proposte", ACCENT, ACCENT_SOFT),
-        ("Rete gap analysis", "addestrata da noi", "→ vuoti: \"manca una giacca\"", GREEN, GREEN_SOFT),
-        ("Somma impatti evitati", "azioni × % CO₂", "→ CO₂ totale → dashboard", GREEN, GREEN_SOFT),
+    row(Inches(5.48), [
+        ("Outfit recommender", "🟨 regole + 🟦 + 🌦", "→ \"cosa metto oggi?\"", PRE, PRE_SOFT),
+        ("Rete gap analysis", "🟩 nostra", "→ vuoti: \"manca una giacca\"", OWN, OWN_SOFT),
+        ("Somma impatti evitati", "🟨 calcolo", "→ CO₂ totale → dashboard", RULE, RULE_SOFT),
     ])
     _add_footer(slide, page)
 
 
-def slide_08_workflow_genai(prs: Presentation, page: int) -> None:
+def slide_12_four_natures(prs, page):
     slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Come ho usato l'AI generativa per costruire il progetto.",
-        kicker="06 · Workflow",
-        subtitle="Strumenti, prompt, confronto e (sì) allucinazioni incontrate.",
-    )
-
-    # Tool table
-    tools_card = _add_card(slide, Inches(0.6), Inches(2.1), Inches(6.0), Inches(4.7),
-                          fill=PANEL, line=BORDER)
-    _set_card_text(
-        tools_card,
-        [
-            ("STRUMENTI USATI", {"size": 11, "bold": True, "color": ACCENT, "space_after": 8}),
-            ("Claude (Anthropic)", {"size": 14, "bold": True, "color": INK, "space_after": 2}),
-            ("Codice, design dell'architettura,", {"size": 11, "color": MUTED, "space_after": 2}),
-            ("scrittura della documentazione.", {"size": 11, "color": MUTED, "space_after": 10}),
-            ("Fashion-CLIP (HuggingFace)", {"size": 14, "bold": True, "color": INK, "space_after": 2}),
-            ("Modello pre-addestrato che riconosce i capi.", {"size": 11, "color": MUTED, "space_after": 10}),
-            ("Stable Diffusion (HuggingFace)", {"size": 14, "bold": True, "color": INK, "space_after": 2}),
-            ("Modello generativo per il try-on virtuale.", {"size": 11, "color": MUTED, "space_after": 10}),
-            ("python-pptx + Claude", {"size": 14, "bold": True, "color": INK, "space_after": 2}),
-            ("Questa stessa presentazione è generata", {"size": 11, "color": MUTED, "space_after": 0}),
-            ("automaticamente da uno script.", {"size": 11, "color": MUTED}),
-        ],
-    )
-
-    # Confronto + allucinazioni
-    cmp_card = _add_card(slide, Inches(6.9), Inches(2.1), Inches(6.0), Inches(2.25),
-                        fill=ACCENT_SOFT, line=ACCENT)
-    _set_card_text(
-        cmp_card,
-        [
-            ("CONFRONTO ALTERNATIVE", {"size": 11, "bold": True, "color": ACCENT, "space_after": 6}),
-            ("Cloud (Claude, OpenAI) vs Locale (Ollama):", {"size": 12, "bold": True, "color": INK, "space_after": 2}),
-            ("→ cloud = qualità superiore", {"size": 11, "color": MUTED, "space_after": 2}),
-            ("→ locale = privacy + zero costi", {"size": 11, "color": MUTED, "space_after": 6}),
-            ("Fashion-CLIP vs CLIP generico:", {"size": 12, "bold": True, "color": INK, "space_after": 2}),
-            ("→ il primo conosce 700k immagini di moda,", {"size": 11, "color": MUTED, "space_after": 2}),
-            ("riconosce molto meglio i capi.", {"size": 11, "color": MUTED}),
-        ],
-    )
-    hall_card = _add_card(slide, Inches(6.9), Inches(4.55), Inches(6.0), Inches(2.25),
-                         fill=GREEN_SOFT, line=DANGER)
-    _set_card_text(
-        hall_card,
-        [
-            ("ALLUCINAZIONI INCONTRATE", {"size": 11, "bold": True, "color": DANGER, "space_after": 6}),
-            ("• AI che propone materiali poco realistici", {"size": 11, "color": INK, "space_after": 2}),
-            ("  per riparare una zip (es. colla termica)", {"size": 10, "color": MUTED, "space_after": 6}),
-            ("• AI che inventa funzioni del linguaggio", {"size": 11, "color": INK, "space_after": 2}),
-            ("  TypeScript non ancora disponibili", {"size": 10, "color": MUTED, "space_after": 6}),
-            ("Soluzione: verifica umana + fallback su una", {"size": 11, "italic": True, "color": MUTED, "space_after": 2}),
-            ("base di tutorial 'sicuri' scritti a mano.", {"size": 11, "italic": True, "color": MUTED}),
-        ],
-    )
-    _add_footer(slide, page)
-
-
-def slide_09a_ml_pretrained(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Riconoscere il capo (Fashion-CLIP)",
-        kicker="07a · ML applicato — modello pre-addestrato",
-        subtitle="Un modello vision già addestrato che adattiamo al nostro guardaroba.",
-    )
-
-    # Modello
-    model_card = _add_card(slide, Inches(0.6), Inches(2.1), Inches(6.0), Inches(2.3),
-                          fill=PANEL, line=ACCENT)
-    _set_card_text(
-        model_card,
-        [
-            ("MODELLO", {"size": 11, "bold": True, "color": ACCENT, "space_after": 4}),
-            ("Fashion-CLIP", {"size": 22, "bold": True, "color": INK, "space_after": 6}),
-            ("Sviluppato da Patrick John Chia (2023), pre-addestrato", {"size": 12, "color": MUTED, "space_after": 2}),
-            ("su 700.000 immagini di capi di abbigliamento.", {"size": 12, "color": MUTED, "space_after": 4}),
-            ("Open-source, gratuito, scaricabile da HuggingFace.", {"size": 12, "italic": True, "color": GREEN}),
-        ],
-    )
-    # Obiettivo
-    obj_card = _add_card(slide, Inches(6.9), Inches(2.1), Inches(6.0), Inches(2.3),
-                        fill=PANEL, line=ACCENT)
-    _set_card_text(
-        obj_card,
-        [
-            ("OBIETTIVO", {"size": 11, "bold": True, "color": ACCENT, "space_after": 4}),
-            ("Classificazione zero-shot", {"size": 18, "bold": True, "color": INK, "space_after": 6}),
-            ("Una foto in ingresso → l'AI decide a quale", {"size": 12, "color": MUTED, "space_after": 2}),
-            ("delle 14 categorie appartiene (t-shirt, jeans,", {"size": 12, "color": MUTED, "space_after": 2}),
-            ("camicia, vestito, scarpe, …) e quanto è sicura.", {"size": 12, "color": MUTED, "space_after": 4}),
-            ("Non serve riaddestrare: le categorie le scelgo io.", {"size": 12, "italic": True, "color": GREEN}),
-        ],
-    )
-
-    # Pipeline visuale
-    _add_textbox(
-        slide, Inches(0.6), Inches(4.65), Inches(12), Inches(0.4),
-        "Il flusso, semplificato:", size=14, bold=True,
-    )
-    steps = [
-        ("📷", "Foto del capo"),
-        ("🧠", "Fashion-CLIP la 'guarda'"),
-        ("🏷️", "Restituisce: categoria,\ncolore, confidenza"),
-        ("💾", "Salvo nel guardaroba"),
+    _add_slide_title(slide, "Quattro nature, ognuna dove ha senso.",
+                     kicker="05 · La tesi tecnica",
+                     subtitle="Non 'AI ovunque': lo strumento giusto per ogni problema.")
+    cards = [
+        ("pre", "AI PRE-ADDESTRATA", "Fashion-CLIP",
+         "Quando il problema (riconoscere un capo) è\ngenerale e qualcun altro l'ha già risolto su\nmilioni di immagini. Non lo rifacciamo noi."),
+        ("own", "AI ALLENATA DA NOI", "rete stato · gap analysis",
+         "Quando il problema è specifico del nostro\ndominio e abbiamo (o generiamo) i dati per\ninsegnarlo. Qui dimostriamo il know-how ML."),
+        ("gen", "AI GENERATIVA", "LLM · VLM · diffusion",
+         "Quando serve creare contenuto nuovo e\npersonalizzato: tutorial di riparazione,\ndescrizioni, prova virtuale del capo."),
+        ("rule", "REGOLE / TABELLE", "cost-per-wear · CO₂ · colore",
+         "Quando la relazione è già nota, esatta e va\ntenuta trasparente. Una rete qui darebbe solo\nfalsa precisione e meno fiducia."),
     ]
-    step_w = Inches(2.7)
-    gap = Inches(0.3)
-    start_x = Inches(0.6)
-    for i, (icon, label) in enumerate(steps):
-        x = start_x + (step_w + gap) * i
-        card = _add_card(slide, x, Inches(5.2), step_w, Inches(1.5),
-                        fill=ACCENT_SOFT, line=ACCENT)
-        _set_card_text(
-            card,
-            [
-                (icon, {"size": 28, "color": ACCENT, "align": PP_ALIGN.CENTER, "space_after": 2}),
-                (label, {"size": 11, "color": INK, "align": PP_ALIGN.CENTER}),
-            ],
-        )
-        if i < len(steps) - 1:
-            arrow_x = x + step_w + Inches(0.05)
-            arrow = slide.shapes.add_shape(
-                MSO_SHAPE.RIGHT_ARROW, arrow_x, Inches(5.85),
-                Inches(0.2), Inches(0.3),
-            )
-            arrow.fill.solid()
-            arrow.fill.fore_color.rgb = ACCENT
-            arrow.line.fill.background()
+    for i, (key, title, sub, desc) in enumerate(cards):
+        col = i % 2
+        rowi = i // 2
+        x = Inches(0.6 + col * 6.35)
+        y = Inches(2.05 + rowi * 2.45)
+        _, color, soft = CATEGORY[key]
+        card = _add_card(slide, x, y, Inches(6.1), Inches(2.25), fill=soft, line=color)
+        _set_card_text(card, [
+            (title, {"size": 15, "bold": True, "color": color, "space_after": 1}),
+            (sub, {"size": 11, "italic": True, "color": MUTED, "space_after": 8}),
+            (desc, {"size": 12, "color": INK}),
+        ])
     _add_footer(slide, page)
 
 
-def slide_09b_ml_trained(prs: Presentation, page: int) -> None:
+def slide_13_feasibility(prs, page):
     slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Tre modelli addestrati da noi",
-        kicker="07b · ML applicato — codice Python in notebook",
-        subtitle="ml/notebooks/closetai_ml.ipynb: classificazione + regressione + clustering.",
-    )
-
-    tasks = [
-        ("🎯", "Classificazione",
-         "Predire se un capo diventerà 'fantasma'.\n\nModello: Logistic Regression\n\nEs.: 'Attenzione, hai già 3\ncappotti acquistati a maggio.'",
-         "AUC ≈ 0,80"),
-        ("📈", "Regressione",
-         "Stimare gli utilizzi nei prossimi\n90 giorni.\n\nModello: Random Forest\n\nEs.: 'Questo capo verrà indossato\n~6 volte → cost-per-wear € 5,80'",
-         "MAE ≈ 2-3 utilizzi"),
-        ("🧩", "Clustering",
-         "Raggruppare i capi in 'stili'\nsenza etichette.\n\nModello: K-Means (K=5) + PCA\n\nEs.: 'cluster casual estivo',\n'occasioni formali'.",
-         "Silhouette ≈ 0,30"),
-    ]
-    for i, (icon, title, body, metric) in enumerate(tasks):
-        x = Inches(0.6 + i * 4.2)
-        card = _add_card(slide, x, Inches(2.1), Inches(4.0), Inches(4.0),
-                        fill=ACCENT_SOFT, line=ACCENT)
-        _set_card_text(
-            card,
-            [
-                (f"{icon}  {title}", {"size": 18, "bold": True, "color": INK, "space_after": 8}),
-                (body, {"size": 12, "color": MUTED, "space_after": 10}),
-                (metric, {"size": 14, "bold": True, "color": GREEN}),
-            ],
-        )
-
-    note = _add_card(slide, Inches(0.6), Inches(6.2), Inches(12.3), Inches(0.7),
-                    fill=GREEN_SOFT, line=GREEN)
-    _set_card_text(
-        note,
-        [
-            ("Tutto su dati realistici sintetici (300 capi). Per il prodotto reale, basta sostituirli col wear log dell'utente.",
-             {"size": 12, "color": INK, "italic": True, "align": PP_ALIGN.CENTER}),
-        ],
-    )
-    _add_footer(slide, page)
-
-
-def slide_10_sustainability(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Analisi di sostenibilità",
-        kicker="08 · L'impatto",
-        subtitle="Ogni azione viene tradotta in CO₂ risparmiata, con equivalenze concrete.",
-    )
-
-    # Big metric
-    hero = _add_card(slide, Inches(0.6), Inches(2.1), Inches(5.0), Inches(4.7),
-                    fill=GREEN_SOFT, line=GREEN)
-    _set_card_text(
-        hero,
-        [
-            ("ESEMPIO DI DEMO", {"size": 11, "bold": True, "color": GREEN, "align": PP_ALIGN.CENTER, "space_after": 12}),
-            ("65 kg", {"size": 72, "bold": True, "color": GREEN, "align": PP_ALIGN.CENTER, "space_after": 4}),
-            ("di CO₂ evitati", {"size": 18, "color": INK, "align": PP_ALIGN.CENTER, "space_after": 20}),
-            ("equivalente a:", {"size": 13, "color": MUTED, "align": PP_ALIGN.CENTER, "space_after": 10}),
-            ("≈ 360 km in auto risparmiati", {"size": 14, "bold": True, "color": INK, "align": PP_ALIGN.CENTER, "space_after": 4}),
-            ("≈ 8 m² di foresta /anno", {"size": 14, "bold": True, "color": INK, "align": PP_ALIGN.CENTER, "space_after": 4}),
-            ("≈ 0,8 voli Pisa-Roma", {"size": 14, "bold": True, "color": INK, "align": PP_ALIGN.CENTER}),
-        ],
-    )
-
-    # How we compute
-    how = _add_card(slide, Inches(5.9), Inches(2.1), Inches(7.0), Inches(4.7),
-                   fill=PANEL, line=BORDER)
-    _set_card_text(
-        how,
-        [
-            ("COME LO MISURIAMO", {"size": 11, "bold": True, "color": ACCENT, "space_after": 8}),
-            ("Per ogni capo, conosciamo la sua impronta CO₂", {"size": 13, "color": INK, "space_after": 4}),
-            ("di produzione (fonte: Ellen MacArthur Foundation):", {"size": 13, "color": INK, "space_after": 10}),
-            ("• T-shirt:  7 kg     • Jeans:    32 kg", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("• Camicia: 10 kg     • Giacca:   25 kg", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("• Maglione: 14 kg    • Cappotto: 40 kg", {"size": 13, "color": MUTED, "space_after": 16}),
-            ("Per ogni azione circolare, una % evitata:", {"size": 13, "color": INK, "space_after": 8}),
-            ("• Donare / scambiare / vendere → 100%", {"size": 13, "color": GREEN, "space_after": 4}),
-            ("• Riparare → 70%   • Riciclare → 30%", {"size": 13, "color": GREEN, "space_after": 12}),
-            ("Es. donare una giacca = 25 kg risparmiati.", {"size": 13, "italic": True, "color": MUTED}),
-        ],
-    )
-    _add_footer(slide, page)
-
-
-def slide_11_feasibility(prs: Presentation, page: int) -> None:
-    slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Studio di fattibilità",
-        kicker="09 · Costi, materiali, scalabilità",
-        subtitle="Si può davvero portare un prodotto del genere sul mercato?",
-    )
-
+    _add_slide_title(slide, "Studio di fattibilità.",
+                     kicker="06 · Costi, materiali, scalabilità",
+                     subtitle="Si può davvero portarlo sul mercato?")
     cols = [
-        ("💰 Costi", ACCENT, [
+        ("💰 Costi", PRE, [
             "Hardware: laptop + telefono.",
-            "Modelli AI: tutti gratuiti / open-source.",
+            "Modelli AI: gratuiti / open-source.",
             "Cloud opzionale: ~€ 0,01 a utente/mese",
-            "(grazie al caching delle risposte).",
+            "(grazie alla cache delle risposte).",
             "Specchio smart: ~€ 200 una tantum.",
         ]),
-        ("🧱 Materiali", GREEN, [
-            "Tutto open-source (no licenze):",
-            "FastAPI, React, Fashion-CLIP,",
-            "Stable Diffusion, ChromaDB.",
-            "Ne consegue piena trasparenza,",
-            "audit possibile, no lock-in vendor.",
+        ("🧱 Materiali", OWN, [
+            "Tutto open-source, nessuna licenza:",
+            "FastAPI, React, Fashion-CLIP, Qwen-VL,",
+            "Stable Diffusion, scikit-learn, PyTorch.",
+            "Piena trasparenza e nessun lock-in",
+            "su un fornitore.",
         ]),
-        ("📈 Scalabilità", WARN, [
+        ("📈 Scalabilità", RULE, [
             "MVP: single-user, locale.",
-            "→ Cloud per multi-utente (Postgres+S3).",
-            "→ AI on-device per privacy estrema.",
-            "→ Versione enterprise con marketplace",
+            "→ Cloud multi-utente (Postgres + S3).",
+            "→ AI on-device per la privacy.",
+            "→ Versione con marketplace",
             "second-hand integrato.",
         ]),
     ]
     for i, (title, color, items) in enumerate(cols):
         x = Inches(0.6 + i * 4.2)
-        card = _add_card(slide, x, Inches(2.1), Inches(4.0), Inches(4.7),
-                        fill=PANEL, line=color)
+        card = _add_card(slide, x, Inches(2.1), Inches(4.0), Inches(4.7), fill=PANEL, line=color)
         lines = [(title, {"size": 18, "bold": True, "color": color, "space_after": 10})]
-        for item in items:
-            lines.append((item, {"size": 12, "color": INK, "space_after": 6}))
+        for it in items:
+            lines.append((it, {"size": 12, "color": INK, "space_after": 6}))
         _set_card_text(card, lines)
     _add_footer(slide, page)
 
 
-def slide_12_limits_future(prs: Presentation, page: int) -> None:
+def slide_14_limits(prs, page):
     slide = _new_slide(prs)
-    _add_slide_title(
-        slide, "Cosa il prototipo non fa (ancora).",
-        kicker="10 · Onestà intellettuale",
-        subtitle="E dove potrebbe andare in futuro.",
-    )
+    _add_slide_title(slide, "Cosa il prototipo non fa (ancora).",
+                     kicker="07 · Onestà intellettuale",
+                     subtitle="E dove potrebbe andare in futuro.")
     cols = [
         ("Limitazioni di oggi", DANGER, [
-            "I modelli AI sono pensati per moda occidentale: meno precisi su capi etnici.",
-            "Le stime di CO₂ sono medie per categoria, non una vera analisi del ciclo di vita.",
-            "Il try-on virtuale è un'illusione visiva, non un vero camerino digitale.",
-            "Per ora è personale: non ci sono account né condivisione.",
+            "I dataset delle reti che alleniamo noi sono sintetici: vanno validati su dati reali.",
+            "Le stime CO₂ sono medie per categoria, non per materiale.",
+            "Il try-on è un'illusione visiva, non un camerino digitale.",
+            "Per ora è personale: niente account né condivisione.",
         ]),
-        ("Estensioni naturali", GREEN, [
-            "Riconoscere automaticamente l'outfit dalla foto di uno specchio.",
-            "Integrare marketplace second-hand (Vinted, Wallapop) per chiudere il cerchio della vendita.",
-            "Modalità famiglia / armadio condiviso.",
-            "Suggerimento pre-acquisto: 'questo capo riempie un vuoto del tuo guardaroba?'",
+        ("Estensioni naturali", OWN, [
+            "Raccolta di foto reali per riaddestrare la rete dello stato.",
+            "Marketplace second-hand integrato (Vinted, Wallapop).",
+            "CO₂ per materiale (cotone vs lana vs poliestere).",
+            "Specchio smart on-device, senza inviare foto in cloud.",
         ]),
     ]
     for i, (title, color, items) in enumerate(cols):
         x = Inches(0.6 + i * 6.3)
-        card = _add_card(slide, x, Inches(2.1), Inches(6.1), Inches(4.7),
-                        fill=PANEL, line=color)
+        card = _add_card(slide, x, Inches(2.1), Inches(6.1), Inches(4.7), fill=PANEL, line=color)
         lines = [(title, {"size": 18, "bold": True, "color": color, "space_after": 12})]
-        for item in items:
-            lines.append((f"•  {item}", {"size": 13, "color": INK, "space_after": 10}))
+        for it in items:
+            lines.append((f"•  {it}", {"size": 13, "color": INK, "space_after": 10}))
         _set_card_text(card, lines)
     _add_footer(slide, page)
 
 
-def slide_13_closing(prs: Presentation, page: int) -> None:
+def slide_15_closing(prs, page):
     slide = _new_slide(prs)
-    band = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.3), SLIDE_H
-    )
+    band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.3), SLIDE_H)
     band.fill.solid()
-    band.fill.fore_color.rgb = GREEN
+    band.fill.fore_color.rgb = OWN
     band.line.fill.background()
-
-    _add_textbox(
-        slide, Inches(0.9), Inches(2.0), Inches(11), Inches(1.1),
-        "Grazie.", size=72, bold=True, color=INK,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(3.2), Inches(11), Inches(0.7),
-        "Vesti meglio. Compra meno. Allunga la vita dei tuoi capi.",
-        size=22, color=GREEN, italic=True,
-    )
-    _add_textbox(
-        slide, Inches(0.9), Inches(4.5), Inches(11), Inches(0.5),
-        "Domande?", size=24, color=ACCENT,
-    )
-
-    box = _add_card(slide, Inches(0.9), Inches(5.4), Inches(11.5), Inches(1.4),
-                   fill=PANEL, line=BORDER)
-    _set_card_text(
-        box,
-        [
-            ("Materiale di approfondimento (per chi vuole guardare):",
-             {"size": 13, "bold": True, "color": ACCENT, "space_after": 6}),
-            ("→ Codice, documentazione e roadmap completi su questo repository.",
-             {"size": 13, "color": INK, "space_after": 4}),
-            ("→ Architettura, decisioni tecniche e analisi di impatto in docs/.",
-             {"size": 13, "color": INK}),
-        ],
-    )
+    _add_textbox(slide, Inches(0.9), Inches(1.9), Inches(11), Inches(1.1),
+                 "Grazie.", size=72, bold=True, color=INK)
+    _add_textbox(slide, Inches(0.9), Inches(3.1), Inches(11.5), Inches(0.7),
+                 "Vesti meglio. Compra meno. Allunga la vita dei tuoi capi.",
+                 size=22, color=OWN, italic=True)
+    _add_textbox(slide, Inches(0.9), Inches(4.3), Inches(11), Inches(0.5),
+                 "Domande?", size=24, color=PRE)
+    box = _add_card(slide, Inches(0.9), Inches(5.2), Inches(11.6), Inches(1.5), fill=PANEL, line=BORDER)
+    _set_card_text(box, [
+        ("Il filo conduttore:", {"size": 13, "bold": True, "color": PRE, "space_after": 4}),
+        ("una storia in 6 tappe, dove ogni problema ha lo strumento giusto —",
+         {"size": 13, "color": INK, "space_after": 4}),
+        ("🟦 modello pre-addestrato · 🟩 rete nostra · 🟪 AI generativa · 🟨 regole trasparenti.",
+         {"size": 13, "color": MUTED}),
+    ])
     _ = page
 
 
@@ -875,21 +692,20 @@ def build() -> Path:
     slides = [
         slide_01_title,
         slide_02_problem,
-        slide_03_solution,
-        slide_04_user_journey,
-        slide_05_demo_home,
-        slide_06_demo_today_dashboard,
-        slide_07_ai_map,
-        slide_07b_ai_pipeline,
-        slide_08_workflow_genai,
-        slide_09a_ml_pretrained,
-        slide_09b_ml_trained,
-        slide_10_sustainability,
-        slide_11_feasibility,
-        slide_12_limits_future,
-        slide_13_closing,
+        slide_03_story_intro,
+        slide_04_tappa_riconosci,
+        slide_05_tappa_indosso,
+        slide_06_tappa_outfit,
+        slide_07_tappa_rovinato,
+        slide_08_tappa_serve,
+        slide_09_tappa_circolare,
+        slide_10_dashboard,
+        slide_11_pipeline,
+        slide_12_four_natures,
+        slide_13_feasibility,
+        slide_14_limits,
+        slide_15_closing,
     ]
-
     for i, builder in enumerate(slides, start=1):
         builder(prs, i)
 
@@ -900,14 +716,12 @@ def build() -> Path:
 
 if __name__ == "__main__":
     out = build()
-    expected_screenshots = ("01-home.png", "02-add.png", "03-detail.png",
-                            "04-today.png", "05-dashboard.png")
-    found = sum(1 for n in expected_screenshots if (SCREENSHOTS_DIR / n).is_file())
+    expected = ("01-home.png", "04-today.png", "05-dashboard.png")
+    found = sum(1 for n in expected if (SCREENSHOTS_DIR / n).is_file())
     print(f"==> Presentazione generata: {out}")
-    print(f"    Slide totali: {TOTAL_PAGES}  (target: ~10 min di parlato)")
-    print(f"    Screenshot trovati: {found}/{len(expected_screenshots)}")
-    if found < len(expected_screenshots):
-        missing = [n for n in expected_screenshots if not (SCREENSHOTS_DIR / n).is_file()]
-        print(f"    Mancanti: {', '.join(missing)}")
-        print(f"    Aggiungili in {SCREENSHOTS_DIR} e rigenera per sostituire i placeholder.")
+    print("    Slide totali: 15  (target: ~10-12 min)")
+    print(f"    Screenshot usati: {found}/{len(expected)}")
+    if found < len(expected):
+        missing = [n for n in expected if not (SCREENSHOTS_DIR / n).is_file()]
+        print(f"    Mancanti (placeholder): {', '.join(missing)}")
     sys.exit(0)
