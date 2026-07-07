@@ -201,6 +201,20 @@ trova i vuoti.* Vedi ADR-011.
 
 ---
 
+## Fase 9 — Frontend narrativo + ML Lab (completata)
+
+Obiettivo: allineare il frontend alla **storia in 6 tappe** della
+presentazione e dare visibilità tecnica alle reti addestrate.
+
+- [x] Logo temporaneo (gruccia che germoglia in foglia) — componente SVG inline `<Logo />` + favicon data-URL. *Da sostituire col design definitivo.*
+- [x] Topbar ridisegnata: brand con logo, nav (Guardaroba · Cosa metto oggi? · Impatto · ML Lab) + CTA "📷 Aggiungi capo"
+- [x] Story strip sulla home: le 6 tappe del ciclo di vita del capo, cliccabili
+- [x] Pagina tecnica `/lab` (ML Lab): stato e metriche delle 3 reti (lette dai checkpoint), dataset, **prova interattiva** della rete stato (upload foto → predizione + confusion matrix) e **simulatore what-if** della gap analysis
+- [x] Backend: router `/ml` (`models`, `condition/predict`, `gap/predict`, `condition/confusion-matrix`); checkpoint gap arricchito con le metriche di test
+- [x] 8 test nuovi (141 totali)
+
+---
+
 ## Estensioni e idee parcheggiate
 
 - Modalità famiglia / guardaroba condiviso

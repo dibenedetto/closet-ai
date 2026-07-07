@@ -1,24 +1,36 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, Link } from 'react-router-dom'
+
+import Logo from './components/Logo'
+
+const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '')
 
 export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>ClosetAI</h1>
+        <Link to="/" className="brand" title="ClosetAI — home">
+          <Logo size={34} />
+          <span className="brand-name">
+            Closet<span className="brand-ai">AI</span>
+          </span>
+        </Link>
         <nav>
-          <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/" end className={navClass}>
             Guardaroba
           </NavLink>
-          <NavLink to="/today" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/today" className={navClass}>
             Cosa metto oggi?
           </NavLink>
-          <NavLink to="/items/new" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Aggiungi capo
+          <NavLink to="/dashboard" className={navClass}>
+            Impatto
           </NavLink>
-          <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Dashboard
+          <NavLink to="/lab" className={navClass}>
+            ML Lab
           </NavLink>
         </nav>
+        <Link to="/items/new" className="add-cta" title="Fotografa un nuovo capo">
+          📷 Aggiungi capo
+        </Link>
       </header>
       <main>
         <Outlet />

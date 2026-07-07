@@ -40,6 +40,10 @@
 | `POST /api/v1/items/{id}/try-on`          | try-on virtuale via diffusion     |
 | `GET /api/v1/items/{id}/try-on/{file}`    | serve immagine try-on generata    |
 | `GET /api/v1/stats/gap-analysis`          | vuoti funzionali del guardaroba (rete neurale) |
+| `GET /api/v1/ml/models`                   | stato + metriche delle reti addestrate (ML Lab) |
+| `POST /api/v1/ml/condition/predict`       | prova rete stato: foto → predizione (no item)   |
+| `POST /api/v1/ml/gap/predict`             | simulatore what-if gap analysis                 |
+| `GET /api/v1/ml/condition/confusion-matrix` | PNG confusion matrix ultimo training          |
 
 Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
@@ -113,8 +117,10 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
 ### Frontend (React 19 + Vite 7 + TypeScript)
 
-- 6 pagine: `/` (guardaroba), `/items/new`, `/items/:id`, `/today`,
-  `/dashboard`, `/mirror`.
+- 7 pagine: `/` (guardaroba con story strip a 6 tappe), `/items/new`,
+  `/items/:id`, `/today`, `/dashboard`, `/lab` (ML Lab tecnica), `/mirror`.
+- Logo temporaneo SVG inline (`components/Logo.tsx`) + favicon data-URL —
+  **placeholder da sostituire** col design definitivo.
 - API client tipizzato in `src/api/` (5 file).
 - Componente riutilizzabile `<CircularSection>` per il modulo circolare.
 - UI dark theme con palette coerente, skeleton loaders, transitions,

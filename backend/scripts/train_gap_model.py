@@ -103,7 +103,7 @@ def train(epochs: int, lr: float, seed: int) -> None:
     preds = (probs >= 0.5).astype(int)
     y_true = Y[te].astype(int)
 
-    _report(y_true, preds)
+    metrics = _report(y_true, preds)
 
     WEIGHTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.save({
@@ -115,26 +115,39 @@ def train(epochs: int, lr: float, seed: int) -> None:
         "threshold": 0.5,
         "feature_mean": mean.tolist(),
         "feature_std": std.tolist(),
+        "metrics": metrics,
+        "n_train": int(len(tr)),
+        "n_test": int(len(te)),
     }, WEIGHTS_PATH)
     print(f"\n==> Pesi salvati: {WEIGHTS_PATH.relative_to(ROOT)}")
     print("    Il backend userà la rete per /stats/gap-analysis.")
 
 
-def _report(y_true: np.ndarray, preds: np.ndarray) -> None:
+def _report(y_true: np.ndarray, preds: np.ndarray) -> dict:
     from sklearn.metrics import f1_score, hamming_loss
 
     subset_acc = float((preds == y_true).all(axis=1).mean())
-    micro_f1 = f1_score(y_true, preds, average="micro", zero_division=0)
-    macro_f1 = f1_score(y_true, preds, average="macro", zero_division=0)
-    hl = hamming_loss(y_true, preds)
+    micro_f1 = float(f1_score(y_true, preds, average="micro", zero_division=0))
+    macro_f1 = float(f1_score(y_true, preds, average="macro", zero_division=0))
+    hl = float(hamming_loss(y_true, preds))
 
     print("\n==> Valutazione (test multi-label):")
     print(f"    Subset accuracy (tutte le label esatte): {subset_acc:.3f}")
     print(f"    Micro-F1: {micro_f1:.3f}   Macro-F1: {macro_f1:.3f}   Hamming loss: {hl:.3f}\n")
     print("    F1 per vuoto:")
     per = f1_score(y_true, preds, average=None, zero_division=0)
+    per_label: dict[str, float] = {}
     for lab, score in zip(GAP_LABELS, per):
+        per_label[lab] = float(score)
         print(f"      {lab:22s} {score:.3f}")
+
+    return {
+        "subset_accuracy": round(subset_acc, 4),
+        "micro_f1": round(micro_f1, 4),
+        "macro_f1": round(macro_f1, 4),
+        "hamming_loss": round(hl, 4),
+        "f1_per_label": {k: round(v, 4) for k, v in per_label.items()},
+    }
 
 
 if __name__ == "__main__":

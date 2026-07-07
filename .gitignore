@@ -286,3 +286,6 @@ ehthumbs.db
 *.swp
 *.swo
 *~
+
+# Miscellaneous
+ml/datasets/Defect-Clothes.v3i.coco/

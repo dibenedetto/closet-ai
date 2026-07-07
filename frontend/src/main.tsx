@@ -9,6 +9,7 @@ import ItemDetailPage from './pages/ItemDetailPage'
 import DashboardPage from './pages/DashboardPage'
 import TodayPage from './pages/TodayPage'
 import MirrorPage from './pages/MirrorPage'
+import MlLabPage from './pages/MlLabPage'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: 'items/:id', element: <ItemDetailPage /> },
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'today', element: <TodayPage /> },
+      { path: 'lab', element: <MlLabPage /> },
     ],
   },
   // La pagina specchio gira fullscreen, senza topbar/nav.

@@ -106,6 +106,15 @@ export default function HomePage() {
 
   return (
     <>
+      <nav className="story-strip" aria-label="Il ciclo di vita di un capo">
+        <Link to="/items/new"><span className="step-num">1</span><span className="step-icon">📷</span>Fotografalo</Link>
+        <Link to="/"><span className="step-num">2</span><span className="step-icon">✓</span>Indossalo</Link>
+        <Link to="/today"><span className="step-num">3</span><span className="step-icon">👗</span>Cosa metto?</Link>
+        <Link to="/dashboard"><span className="step-num">4</span><span className="step-icon">🛠️</span>Riparalo</Link>
+        <Link to="/dashboard"><span className="step-num">5</span><span className="step-icon">🧩</span>Serve altro?</Link>
+        <Link to="/dashboard"><span className="step-num">6</span><span className="step-icon">♻️</span>Seconda vita</Link>
+      </nav>
+
       {stats && (
         <div className="hero-banner">
           <div className="metric">

@@ -711,6 +711,55 @@ Serve l'immagine generata. Il filename UUID funge da capability token.
 
 ---
 
+## ML Lab (pagina tecnica)
+
+Endpoint di **ispezione e prova** delle reti addestrate da noi, usati dalla
+pagina `/lab` del frontend. Sola lettura rispetto al DB.
+
+### `GET /ml/models`
+
+Stato + metriche di training dei tre modelli (rete stato, rete gap, adapter
+VLM) e dei loro dataset. Le metriche vengono lette dai checkpoint salvati
+al momento del training.
+
+```json
+{
+  "models": [
+    {
+      "key": "condition-mlp",
+      "name": "Rete stato del capo (Approccio A)",
+      "nature": "own",
+      "available": true,
+      "architecture": "Fashion-CLIP (frozen) → MLP 512→256→128→4",
+      "metrics": { "val_accuracy": 0.969, "test_accuracy": 0.9625 },
+      "train_command": "uv run python scripts/train_condition_model.py"
+    }
+  ],
+  "datasets": [
+    { "key": "garment_condition", "available": true, "n_samples": 600 }
+  ]
+}
+```
+
+### `POST /ml/condition/predict`
+
+Prova interattiva della rete stato: multipart `image` → predizione con
+probabilità per classe. **Non** crea alcun item. `503` se la rete non è
+addestrata.
+
+### `POST /ml/gap/predict`
+
+Simulatore *what-if* della gap analysis: body JSON con `counts` (conteggi
+per categoria), `n_colors`, `has_neutral`, `ghost_ratio` → vuoti predetti.
+Usa la rete se addestrata (`source: "neural-net"`), altrimenti le regole.
+
+### `GET /ml/condition/confusion-matrix`
+
+Serve il PNG della confusion matrix salvata dall'ultimo training (404 se
+il training non è mai stato eseguito).
+
+---
+
 ## Schemi
 
 ### `Item`

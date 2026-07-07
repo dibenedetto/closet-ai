@@ -37,7 +37,14 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 header.topbar {
   display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap;
 }
-header.topbar h1 { margin: 0; font-size: 22px; font-weight: 700; }
+header.topbar .brand {
+  display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+}
+header.topbar .brand:hover { text-decoration: none; }
+header.topbar .brand-name {
+  font-size: 21px; font-weight: 700; color: var(--text); letter-spacing: -0.02em;
+}
+header.topbar .brand-ai { color: var(--ok); }
 header.topbar nav { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 header.topbar nav a {
   padding: 7px 12px; border-radius: 8px; color: var(--muted); font-size: 13px;
@@ -45,6 +52,34 @@ header.topbar nav a {
 }
 header.topbar nav a:hover { background: var(--panel-2); color: var(--text); text-decoration: none; }
 header.topbar nav a.active { color: var(--text); background: var(--panel-2); font-weight: 600; }
+header.topbar .add-cta {
+  padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  background: var(--accent); color: #0e1320;
+  transition: background var(--transition), transform var(--transition);
+}
+header.topbar .add-cta:hover {
+  background: var(--accent-2); color: #fff; text-decoration: none; transform: translateY(-1px);
+}
+
+/* Story strip: il ciclo di vita del capo in 6 tappe */
+.story-strip {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  margin-bottom: 16px;
+}
+@media (max-width: 760px) { .story-strip { grid-template-columns: repeat(3, 1fr); } }
+.story-strip a {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 9px 6px; border-radius: var(--radius);
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 11px; text-align: center;
+  transition: border-color var(--transition), color var(--transition), transform var(--transition);
+}
+.story-strip a:hover {
+  border-color: var(--accent); color: var(--text); text-decoration: none;
+  transform: translateY(-1px);
+}
+.story-strip .step-icon { font-size: 18px; }
+.story-strip .step-num { color: var(--accent); font-weight: 700; font-size: 10px; }
 
 .panel {
   background: var(--panel); border: 1px solid var(--border);
