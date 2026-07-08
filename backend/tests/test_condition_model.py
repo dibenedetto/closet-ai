@@ -45,7 +45,7 @@ def test_diagnose_falls_back_to_heuristic(client, png) -> None:
     item = _create(client, png, category="t-shirt")
     body = client.post(f"/api/v1/items/{item['id']}/diagnose").json()
     assert body["source"] == "heuristic"
-    assert body["condition"] == "nuovo"
+    assert body["condition"] == "buono"  # "nuovo" fuso in "buono"
     assert body["confidence"] is None
 
 
@@ -63,7 +63,7 @@ def test_diagnose_uses_vision_model_when_available(client, png, monkeypatch) -> 
             return ConditionPrediction(
                 condition="danneggiato",
                 confidence=0.91,
-                probabilities={"nuovo": 0.02, "buono": 0.03, "usurato": 0.04, "danneggiato": 0.91},
+                probabilities={"buono": 0.05, "usurato": 0.04, "danneggiato": 0.91},
             )
 
     # `condition.py` importa il factory lazy dentro la funzione: patchando il
@@ -72,7 +72,7 @@ def test_diagnose_uses_vision_model_when_available(client, png, monkeypatch) -> 
         condition_model, "get_condition_classifier", lambda: FakeConditionClassifier()
     )
 
-    # capo nuovo per l'euristica, ma la foto dice "danneggiato"
+    # capo recente per l'euristica, ma la foto dice "danneggiato"
     item = _create(client, png, category="t-shirt")
     body = client.post(f"/api/v1/items/{item['id']}/diagnose").json()
     assert body["source"] == "clip-mlp"

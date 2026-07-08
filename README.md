@@ -161,33 +161,6 @@ automaticamente dal backend, che sostituisce l'euristica con la rete.
 Dettagli in [docs/architecture.md](docs/architecture.md) (ADR-009) e nella
 [datasheet del dataset](docs/dataset-datasheet.md).
 
-### Estensione: VLM + LoRA (Approccio C, richiede GPU)
-
-Addestra un Visual-LLM (Qwen2-VL-2B) che produce stato **e** tutorial
-personalizzato in un colpo solo. Una **pipeline automatica** esegue tutti
-gli step (scarico capi reali → dataset → distillazione tutorial → training):
-
-```bash
-cd backend
-# Valida tutto SENZA addestrare (veloce, niente download pesante):
-uv run python scripts/train_condition_vlm_pipeline.py --dry-run
-
-# Pipeline completa (GPU + ~4GB download al primo run):
-uv run python scripts/train_condition_vlm_pipeline.py
-
-# Con tutorial distillati da un VLM grande + QLoRA 4-bit (meno VRAM):
-uv run python scripts/train_condition_vlm_pipeline.py --distill --load-4bit
-```
-
-La pipeline è idempotente (salta gli step già fatti; `--force` per rifare).
-Al termine, l'adapter in `ml/weights/condition_vlm_lora/` viene usato
-automaticamente dal backend (routing `auto`). I singoli step restano
-eseguibili separatamente (`fetch_real_garments.py`,
-`build_condition_dataset.py`, `distill_tutorials.py`,
-`train_condition_vlm_lora.py`).
-
-Dettagli e requisiti hardware in [docs/architecture.md](docs/architecture.md) (ADR-010).
-
 ## Gap analysis del guardaroba (rete neurale tabellare)
 
 Una seconda rete neurale addestrata da noi che, dai **dati aggregati** del

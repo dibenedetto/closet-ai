@@ -177,68 +177,6 @@ def generate(
     return LlmResult(text=text, model=model_name, cached=False, latency_ms=latency_ms)
 
 
-def generate_vision(
-    image_path: str,
-    user: str,
-    *,
-    system: str | None = None,
-    model: str | None = None,
-    max_tokens: int | None = None,
-) -> str | None:
-    """Genera testo a partire da **immagine + prompt** (modello multimodale).
-
-    Usa il formato multimodale di litellm (compatibile OpenAI): l'immagine è
-    inviata come data-URL base64. Funziona con i VLM cloud (Claude, GPT-4o) e
-    locali (es. `ollama/llava`, `ollama/qwen2-vl`). Ritorna `None` su errore.
-
-    Usato per la **distillazione** dei tutorial: un VLM grande guarda la foto
-    e scrive un tutorial personalizzato (vedi `scripts/distill_tutorials.py`).
-    """
-    import base64
-    import mimetypes
-    from pathlib import Path as _Path
-
-    model_name = model or LLM_MODEL
-    if not is_llm_configured(model_name):
-        log.info("VLM non configurato (%s)", model_name)
-        return None
-
-    p = _Path(image_path)
-    mime = mimetypes.guess_type(p.name)[0] or "image/png"
-    b64 = base64.b64encode(p.read_bytes()).decode("ascii")
-    data_url = f"data:{mime};base64,{b64}"
-
-    try:
-        import litellm
-    except ImportError:
-        return None
-
-    messages: list[dict[str, Any]] = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append(
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": user},
-                {"type": "image_url", "image_url": {"url": data_url}},
-            ],
-        }
-    )
-
-    try:
-        response = litellm.completion(  # type: ignore[no-untyped-call]
-            model=model_name,
-            messages=messages,
-            max_tokens=max_tokens or LLM_MAX_TOKENS,
-            timeout=LLM_TIMEOUT,
-        )
-        return (response.choices[0].message.content or "").strip() or None
-    except Exception as e:
-        log.warning("Errore VLM (%s): %s", model_name, e)
-        return None
-
-
 def generate_json(
     user: str,
     *,

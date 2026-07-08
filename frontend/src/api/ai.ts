@@ -1,7 +1,6 @@
-/** Client per gli endpoint AI generativa (descrizione, coach, try-on, tutorial LLM). */
+/** Client per gli endpoint AI generativa (descrizione, coach, try-on). */
 import type { Item } from './items'
 import { API_BASE, asError, jsonOrThrow } from './client'
-import type { RepairTutorial } from './circular'
 
 export interface LlmStatus {
   configured: boolean
@@ -64,19 +63,6 @@ export async function getCoachMessage(
 ): Promise<CoachOut> {
   return jsonOrThrow<CoachOut>(
     await fetch(`${API_BASE}/stats/coach?ghost_after_days=${ghostAfterDays}`),
-  )
-}
-
-export async function getEnrichedTutorial(
-  defect: string,
-  opts: { category?: string; color?: string; condition?: string } = {},
-): Promise<RepairTutorial> {
-  const params = new URLSearchParams({ defect })
-  if (opts.category) params.set('category', opts.category)
-  if (opts.color) params.set('color', opts.color)
-  if (opts.condition) params.set('condition', opts.condition)
-  return jsonOrThrow<RepairTutorial>(
-    await fetch(`${API_BASE}/repair-tutorials/enrich?${params.toString()}`),
   )
 }
 

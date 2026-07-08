@@ -174,13 +174,19 @@ Hardware target: GPU locale.
 ### 7.2 Modello
 - [x] **A** — testa MLP su embedding Fashion-CLIP (CPU-friendly) — `app/ml/condition_model.py`
 - [x] Training script `scripts/train_condition_model.py` (estrazione embedding con cache + MLP PyTorch + early stopping)
-- [x] Valutazione: sul **COCO reale** acc globale ~0.60 ma **F1 0.95 su `danneggiato`** (difetti veri) e recall 1.0 su `usurato`; la confusione è tutta in nuovo↔buono (confine artificiale del labeling sintetico — documentato in datasheet). Su dataset sintetici: ~0.94-0.96 (sovrastima).
+- [x] Valutazione (percorso completo, documentato in datasheet): sintetico ~0.94-0.96 (sovrastima) → COCO reale 4 classi ~0.60 (domain gap: confusione tutta in nuovo↔buono, confine artificiale) → **fusione nuovo+buono** → **3 classi oneste su foto reali: test acc ~0.94** (danneggiato F1 0.98, precision 1.00)
+- [x] **Fusione classi `nuovo`+`buono` → `buono`** su tutta la filiera: modello, builder, euristica, VLM (sinonimi), schemi, azioni circolari, frontend, migrazione dati DB (`UPDATE items SET condition='buono' WHERE condition='nuovo'`)
 - [x] Integrazione `services/condition.py`: usa il modello se i pesi esistono + foto leggibile, altrimenti euristica; espone `source` + `confidence`
 - [x] 5 test (MLP, fallback graceful, predizione con fake, file mancante)
 - [ ] **B** — fine-tuning CNN (ResNet/EfficientNet) con torchvision *(opzionale)*
-- [x] **C** — VLM + LoRA: **codice production-ready**. Training (`train_condition_vlm_lora.py`), distillazione tutorial (`distill_tutorials.py`), inferenza (`app/ml/condition_vlm.py`) e **pipeline automatica** (`train_condition_vlm_pipeline.py`). Manca solo eseguire sulla GPU dell'utente. Vedi ADR-010.
+- [x] **C** — VLM + LoRA: **codice production-ready** (poi rimosso, vedi 7.3). Training (`train_condition_vlm_lora.py`), distillazione tutorial (`distill_tutorials.py`), inferenza (`app/ml/condition_vlm.py`) e **pipeline automatica** (`train_condition_vlm_pipeline.py`). Manca solo eseguire sulla GPU dell'utente.
 - [x] Integrazione Approccio C in `services/condition.py` — routing a cascata `CLOSETAI_CONDITION_BACKEND` (auto/vlm-lora/clip-mlp/heuristic) con fallback fail-safe, `defect`+`tutorial` esposti in `/diagnose` + UI. 13 test (VLM mock).
 - [ ] Raccolta foto reali → riaddestrare (riduce il domain gap del sintetico)
+
+### 7.3 Decisione: rimozione della feature "tutorial di riparazione"
+- [x] **Rimossa interamente** la feature tutorial: knowledge base hardcoded (`repair_tutorials.py`), arricchimento LLM (`GET /repair-tutorials/enrich`), endpoint `/repair-tutorials*`, e l'intero **Approccio C** (VLM+LoRA, `condition_vlm.py`, `train_condition_vlm_lora.py`, `train_condition_vlm_pipeline.py`, `distill_tutorials.py`). Motivazione: principio *MVP first* — il valore di un how-to testuale generico era basso rispetto al costo di mantenere due modelli generativi/vision aggiuntivi. L'azione circolare `riparazione` resta loggabile (senza testo guidato). ADR-010 marcata come superata in `docs/architecture.md`.
+- [x] `services/condition.py` torna a 2 backend in cascata: `clip-mlp` → `heuristic` (era `vlm-lora` → `clip-mlp` → `heuristic`).
+- [x] Frontend: rimossi modale tutorial, select difetti, bottone "Mostra tutorial" da `<CircularSection>`.
 
 ---
 
@@ -212,6 +218,34 @@ presentazione e dare visibilità tecnica alle reti addestrate.
 - [x] Pagina tecnica `/lab` (ML Lab): stato e metriche delle 3 reti (lette dai checkpoint), dataset, **prova interattiva** della rete stato (upload foto → predizione + confusion matrix) e **simulatore what-if** della gap analysis
 - [x] Backend: router `/ml` (`models`, `condition/predict`, `gap/predict`, `condition/confusion-matrix`); checkpoint gap arricchito con le metriche di test
 - [x] 8 test nuovi (141 totali)
+
+---
+
+## Fase 10 — Rimozione tutorial, restyle moderno, note oratore (completata)
+
+Tre richieste dirette dell'utente, in preparazione al pre-esame:
+
+- [x] **Rimossa la feature "tutorial di riparazione"** (vedi Fase 7.3 e
+  ADR-010 in `docs/architecture.md`): scelta di scope, non un bug.
+- [x] **Restyle frontend moderno**: nuovi design token in `index.css`
+  (palette, radius/shadow scale, font Inter Variable self-hosted via
+  `@fontsource-variable/inter`), header sticky con glass/blur, menu mobile
+  con hamburger (`App.tsx`), card/badge/hero-banner/stepper ridisegnati.
+  Verificato con screenshot reali (Chrome headless) su home/today/ML
+  Lab/dettaglio capo/mobile; trovato e corretto un bug di specificità CSS
+  (`.topbar-nav a` batteva `.add-cta-mobile`, duplicava la CTA su desktop).
+- [x] **Presentazione rigenerata** (`scripts/generate_presentation.py`):
+  rimossi i riferimenti al tutorial (slide tappa 4 riscritta attorno alla
+  storia del domain gap sintetico→reale→fusione classi), aggiunte **note
+  oratore** su tutte le 15 slide (~1630 parole totali, ~11-12 min a ritmo
+  normale) via `slide.notes_slide.notes_text_frame`.
+
+**Nota**: la verifica visiva ha usato `seed_demo.py --reset` contro il DB
+locale reale (`data/closetai.db`) invece di un DB temporaneo isolato,
+cancellando i capi che c'erano prima e sostituendoli con i 12 capi demo
+standard. `data/` non è versionato — da tenere a mente per le prossime
+sessioni di verifica UI (usare sempre `CLOSETAI_DATA_DIR` puntato a una
+cartella temporanea).
 
 ---
 

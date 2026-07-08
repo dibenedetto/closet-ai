@@ -5,7 +5,6 @@
 - `GET  /items/{id}/try-on/{filename}` → serve l'immagine generata
 - `GET  /tryon/status`         → ispeziona il backend try-on
 - `GET  /stats/coach`          → messaggio AI sostenibilità
-- `GET  /repair-tutorials/enrich?defect=...` → tutorial generato LLM
 """
 
 from __future__ import annotations
@@ -27,15 +26,9 @@ from app.config import (
 )
 from app.db import get_db
 from app.models import Item
-from app.schemas import (
-    CoachOut,
-    ItemDescriptionOut,
-    RepairTutorialOut,
-    TryOnOut,
-    TryOnStatus,
-)
+from app.schemas import CoachOut, ItemDescriptionOut, TryOnOut, TryOnStatus
 from app.services import coach as coach_service
-from app.services import descriptions, llm, repair_tutorials, tryon
+from app.services import descriptions, llm, tryon
 
 router = APIRouter(tags=["ai"])
 log = logging.getLogger(__name__)
@@ -111,39 +104,6 @@ def get_coach(
         )
     return CoachOut(
         text=msg.text, facts=msg.facts, model=msg.model, cached=msg.cached
-    )
-
-
-# ============================================================================
-# Tutorial LLM-enriched
-# ============================================================================
-
-
-@router.get("/repair-tutorials/enrich", response_model=RepairTutorialOut)
-def get_enriched_tutorial(
-    defect: str = Query(..., min_length=2),
-    category: str | None = Query(default=None),
-    color: str | None = Query(default=None),
-    condition: str | None = Query(default=None),
-    db: Session = Depends(get_db),
-) -> RepairTutorialOut:
-    """Tutorial generato dinamicamente dall'LLM. Fallback alla KB hardcoded
-    se l'LLM non è raggiungibile."""
-    tut = repair_tutorials.enrich_with_llm(
-        defect, category=category, color=color, condition=condition, db=db
-    )
-    if tut is None:
-        tut = repair_tutorials.get_tutorial(defect, category=category)
-    return RepairTutorialOut(
-        defect=tut.defect,
-        category=tut.category,
-        title=tut.title,
-        difficulty=tut.difficulty,
-        time_minutes=tut.time_minutes,
-        materials=list(tut.materials),
-        steps=list(tut.steps),
-        source=tut.source,
-        llm_enrichment_available=repair_tutorials.llm_enrichment_available(),
     )
 
 

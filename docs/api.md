@@ -444,13 +444,12 @@ Lista cronologica (desc) dei feedback salvati. Query: `limit` (1–200, default 
 
 ### `POST /items/{item_id}/diagnose`
 
-Diagnostica la condizione del capo (`nuovo`/`buono`/`usurato`/`danneggiato`).
+Diagnostica la condizione del capo (`buono`/`usurato`/`danneggiato` — "nuovo" è stato fuso in "buono", vedi ADR-009).
 Usa il backend configurato da `CLOSETAI_CONDITION_BACKEND` (default `auto`:
-prova il VLM fine-tunato, poi l'MLP su Fashion-CLIP, poi l'euristica
-`wear_count` + età). Il campo `source` indica quale backend ha risposto.
-Quando il backend è il VLM (`vlm-lora`), `defect` e `tutorial` sono
-valorizzati. Se l'item non aveva ancora una `condition`, viene persistita.
-Restituisce anche la lista di azioni circolari suggerite con stima CO₂.
+prova l'MLP su Fashion-CLIP, poi l'euristica `wear_count` + età). Il campo
+`source` indica quale backend ha risposto. Se l'item non aveva ancora una
+`condition`, viene persistita. Restituisce anche la lista di azioni
+circolari suggerite con stima CO₂.
 
 **Risposta `200`** — `DiagnoseResponse`:
 
@@ -463,8 +462,6 @@ Restituisce anche la lista di azioni circolari suggerite con stima CO₂.
   "rationale": "42 utilizzi su 540 giorni: segni d'uso attesi",
   "source": "heuristic",
   "confidence": null,
-  "defect": null,
-  "tutorial": null,
   "suggestions": [
     {
       "action_type": "riparazione",
@@ -564,37 +561,6 @@ Statistiche aggregate del modulo circolare.
 
 ---
 
-### `GET /repair-tutorials/defects` · `GET /repair-tutorials`
-
-Knowledge base di tutorial di riparazione per difetti comuni (strappo,
-macchia, cucitura, bottone, elastico, zip, buco, scolorimento).
-
-```bash
-curl -s "http://localhost:8000/api/v1/repair-tutorials/defects" | jq .
-curl -s "http://localhost:8000/api/v1/repair-tutorials?defect=zip&category=giacca" | jq .
-```
-
-**Risposta `200`** — `RepairTutorial`:
-
-```json
-{
-  "defect": "zip",
-  "category": "giacca",
-  "title": "Sbloccare o sostituire una zip",
-  "difficulty": "media",
-  "time_minutes": 25,
-  "materials": ["matita HB (grafite) o sapone", "pinze", "..."],
-  "steps": ["...", "..."],
-  "source": "hardcoded",
-  "llm_enrichment_available": false
-}
-```
-
-`llm_enrichment_available` è `true` se un LLM è configurato (qualsiasi
-provider supportato da litellm — vedi sezione "AI generativa").
-
----
-
 ## AI generativa (LLM + try-on)
 
 Endpoint che usano un LLM (litellm) o un modello diffusion (diffusers).
@@ -667,18 +633,6 @@ chiamare l'LLM). **503** se LLM non configurato.
 
 ---
 
-### `GET /repair-tutorials/enrich`
-
-Tutorial di riparazione **generato dinamicamente da LLM**. Fallback alla
-KB hardcoded (`GET /repair-tutorials`) se l'LLM non risponde.
-
-**Query**: `defect` (obbligatorio), `category`, `color`, `condition`.
-
-**Risposta `200`** — `RepairTutorial` con `source: "llm"` (oppure
-`"hardcoded"` se fallback).
-
----
-
 ### `POST /items/{item_id}/try-on`
 
 Try-on virtuale via diffusion model locale (Stable Diffusion inpainting).
@@ -718,9 +672,9 @@ pagina `/lab` del frontend. Sola lettura rispetto al DB.
 
 ### `GET /ml/models`
 
-Stato + metriche di training dei tre modelli (rete stato, rete gap, adapter
-VLM) e dei loro dataset. Le metriche vengono lette dai checkpoint salvati
-al momento del training.
+Stato + metriche di training dei due modelli (rete stato, rete gap) e dei
+loro dataset. Le metriche vengono lette dai checkpoint salvati al momento
+del training.
 
 ```json
 {
@@ -730,8 +684,8 @@ al momento del training.
       "name": "Rete stato del capo (Approccio A)",
       "nature": "own",
       "available": true,
-      "architecture": "Fashion-CLIP (frozen) → MLP 512→256→128→4",
-      "metrics": { "val_accuracy": 0.969, "test_accuracy": 0.9625 },
+      "architecture": "Fashion-CLIP (frozen) → MLP 512→256→128→3",
+      "metrics": { "val_accuracy": 0.960, "test_accuracy": 0.940 },
       "train_command": "uv run python scripts/train_condition_model.py"
     }
   ],
@@ -775,7 +729,7 @@ interface Item {
   purchase_date: string | null           // "YYYY-MM-DD"
   classification_confidence: number | null  // 0–1, null per mock o se ignota
   description: string | null             // descrizione AI-generata, null se assente
-  condition: 'nuovo' | 'buono' | 'usurato' | 'danneggiato' | null
+  condition: 'buono' | 'usurato' | 'danneggiato' | null
   retired_at: string | null              // ISO-8601 UTC quando ritirato
   created_at: string                     // ISO-8601 UTC
 }

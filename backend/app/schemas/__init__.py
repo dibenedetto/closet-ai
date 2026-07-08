@@ -8,8 +8,6 @@ from app.schemas.circular import (
     ImpactStats,
     ItemActionCreate,
     ItemActionRead,
-    RepairTutorialOut,
-    SupportedDefects,
 )
 from app.schemas.item import ItemRead
 from app.schemas.outfit import (
@@ -52,8 +50,6 @@ __all__ = [
     "OutfitFeedbackRead",
     "OutfitSuggestResponse",
     "OutfitSuggestion",
-    "RepairTutorialOut",
-    "SupportedDefects",
     "TopItem",
     "TryOnOut",
     "TryOnStatus",

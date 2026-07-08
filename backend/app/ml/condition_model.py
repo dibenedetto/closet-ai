@@ -2,7 +2,7 @@
 
 Architettura (Approccio A): **testa MLP su embedding Fashion-CLIP**.
 
-    foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (4 classi)
+    foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (3 classi)
             [pre-addestrato]                              [addestrato da noi]
 
 La parte "addestrata da noi" è il piccolo MLP a valle: leggero (~170k
@@ -27,7 +27,9 @@ from app.config import PROJECT_ROOT
 log = logging.getLogger(__name__)
 
 # Etichette in ordine di indice (devono combaciare con il training).
-CONDITION_LABELS: tuple[str, ...] = ("nuovo", "buono", "usurato", "danneggiato")
+# NB: "nuovo" e "buono" sono state FUSE in "buono": su foto reali il confine
+# era artificiale (solo pieghe sintetiche leggere) e generava confusione.
+CONDITION_LABELS: tuple[str, ...] = ("buono", "usurato", "danneggiato")
 
 WEIGHTS_PATH = Path(
     __import__("os").environ.get(

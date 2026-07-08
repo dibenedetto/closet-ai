@@ -31,12 +31,10 @@
 | `PUT /api/v1/items/{id}/condition`        | override manuale condizione                       |
 | `POST/GET /api/v1/items/{id}/actions`     | azioni circolari (registra/lista)                 |
 | `DELETE /api/v1/actions/{id}`             | rimuove azione (riattiva il capo se necessario)   |
-| `GET /api/v1/repair-tutorials[/defects]`  | tutorial riparazione (KB hardcoded)               |
 
 | `GET /api/v1/llm/status` · `/tryon/status` | introspection per UI            |
 | `POST /api/v1/items/{id}/describe`        | descrizione capo via LLM          |
 | `GET /api/v1/stats/coach`                 | coach sostenibilità via LLM       |
-| `GET /api/v1/repair-tutorials/enrich`     | tutorial via LLM (con fallback)   |
 | `POST /api/v1/items/{id}/try-on`          | try-on virtuale via diffusion     |
 | `GET /api/v1/items/{id}/try-on/{file}`    | serve immagine try-on generata    |
 | `GET /api/v1/stats/gap-analysis`          | vuoti funzionali del guardaroba (rete neurale) |
@@ -82,20 +80,6 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
   ([`gap_analysis.py`](../backend/app/services/gap_analysis.py)) con fallback
   a regole, endpoint `/stats/gap-analysis` + card in dashboard. Vedi ADR-011.
 
-### Diagnosi stato (segue)
-
-  - VLM+LoRA (Approccio C) — **integrazione production-ready**:
-    routing a cascata in `services/condition.py`
-    (`CLOSETAI_CONDITION_BACKEND` = auto/vlm-lora/clip-mlp/heuristic) con
-    fallback fail-safe, output VLM validato, `defect`+`tutorial` esposti in
-    `/diagnose` e mostrati nella Ut. Training + distillazione tutorial
-    pronti ([`train_condition_vlm_lora.py`](../backend/scripts/train_condition_vlm_lora.py),
-    [`distill_tutorials.py`](../backend/scripts/distill_tutorials.py)).
-    **Manca solo** addestrare l'adapter sulla GPU dell'utente; il codice è
-    testato con un VLM fittizio. **Pipeline automatica**:
-    `scripts/train_condition_vlm_pipeline.py` (fetch → build → distill →
-    train, idempotente, con `--dry-run`). Vedi ADR-010.
-
 ### AI generativa (attivata in Fase 6.1)
 
 - **Gateway litellm** (`services/llm.py`): unico punto di chiamata
@@ -105,9 +89,6 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
   italiane per ogni capo, salvate su `Item.description`.
 - **Coach sostenibilità** (`services/coach.py`): consiglio personalizzato
   dalla dashboard, basato su stats + capi fantasma.
-- **Tutorial riparazione** (`services/repair_tutorials.py`): KB hardcoded
-  + funzione `enrich_with_llm()` per personalizzazione su categoria/colore/
-  condizione del capo.
 - **Try-on virtuale** (`services/tryon.py`): backend astratto, default
   `disabled`; `DiffusersLocalBackend` esegue Stable Diffusion 2 inpainting
   locale con maschera torso euristica.
@@ -137,7 +118,7 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
   - 5 reclassify + Chroma
   - 14 wear log + stats
   - 17 outfit recommender + meteo fallback + feedback
-  - 20 modulo circolare (diagnosi + azioni + impact + tutorial)
+  - 20 modulo circolare (diagnosi + azioni + impact)
   - + health
 - Fixture isolata per ogni test: DB SQLite temp, cartella `items/`, Chroma,
   classifier mock obbligatorio.
@@ -154,8 +135,8 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 - [docs/demo-script.md](demo-script.md) — scaletta operativa demo finale.
 - [docs/screenshots/README.md](screenshots/README.md) — come catturare gli
   screenshot (manuale).
-- [docs/presentation.pptx](presentation.pptx) — slide consegna (23 slide,
-  italiano). Rigenerabile via
+- [docs/presentation.pptx](presentation.pptx) — slide consegna (15 slide +
+  note oratore per l'orale, italiano). Rigenerabile via
   `backend/scripts/generate_presentation.py`.
 
 ### Tooling
@@ -245,7 +226,7 @@ considerate.
    - `backend/app/main.py` — entry point, routing.
    - `backend/app/models/` — schema dati.
    - `backend/app/services/` — logica di business (color, recommender,
-     condition, circular, repair_tutorials, stats, weather, embeddings).
+     condition, circular, stats, weather, embeddings).
    - `backend/app/routers/` — endpoint REST.
    - `frontend/src/api/` — client API tipizzato.
    - `frontend/src/pages/` — pagine React.

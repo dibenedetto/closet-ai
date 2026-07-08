@@ -69,6 +69,12 @@ def _apply_lightweight_migrations() -> None:
             for name, sql_type in cols:
                 if name not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
+        # Migrazione dati: la classe "nuovo" è stata fusa in "buono" (ADR-009).
+        # Idempotente: dopo la prima esecuzione non trova più righe da toccare.
+        if inspector.has_table("items"):
+            conn.execute(
+                text("UPDATE items SET condition = 'buono' WHERE condition = 'nuovo'")
+            )
 
 
 def get_db() -> Generator[Session, None, None]:

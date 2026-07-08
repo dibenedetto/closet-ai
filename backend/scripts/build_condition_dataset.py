@@ -1,7 +1,7 @@
 """Costruttore del dataset per la diagnosi dello *stato di conservazione*.
 
 Problema: non esiste un dataset pubblico che etichetti i capi per stato
-d'usura (nuovo / buono / usurato / danneggiato). Lo costruiamo con
+d'usura (buono / usurato / danneggiato). Lo costruiamo con
 **degradazione sintetica controllata**: partiamo da immagini di capi in
 buono stato e applichiamo trasformazioni che simulano l'usura, ottenendo
 coppie (immagine, stato) etichettate in automatico.
@@ -11,7 +11,7 @@ Sorgenti delle immagini, in ordine di preferenza:
 1. ``ml/datasets/Defect-Clothes.v3i.coco/`` — dataset COCO (Roboflow,
    CC BY 4.0) con **difetti reali annotati**: cut→strappo, hole→buco,
    stain→macchia. Modalità **ibrida**: i `danneggiato` sono foto reali di
-   danni veri; nuovo/buono/usurato derivano dalle foto pulite dello stesso
+   danni veri; buono/usurato derivano dalle foto pulite dello stesso
    dataset (usurato con degradazione sintetica, il COCO non ha la classe
    "consumato"). Disattivabile con ``--no-coco``.
 2. ``ml/datasets/source/`` — se contiene immagini (jpg/png/webp), le usa
@@ -21,11 +21,9 @@ Sorgenti delle immagini, in ordine di preferenza:
 
 Output in ``ml/datasets/garment_condition/``:
 
-- ``images/{nuovo,buono,usurato,danneggiato}/*.png`` — immagini etichettate
+- ``images/{buono,usurato,danneggiato}/*.png`` — immagini etichettate
 - ``manifest.csv`` — una riga per immagine (path, categoria, colore,
   stato, difetto, severità, split train/val/test)
-- ``vlm_dataset.jsonl`` — formato instruction-tuning per fine-tuning di un
-  Visual-LLM (LoRA): ogni riga è una conversazione image→{stato, tutorial}
 - ``preview.png`` — griglia di anteprima (un esempio per stato)
 
 Uso::
@@ -53,7 +51,6 @@ from PIL import Image, ImageDraw, ImageFilter
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.ml.color import NAMED_COLORS, dominant_color_name  # noqa: E402
-from app.services import repair_tutorials  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE_DIR = ROOT / "ml" / "datasets" / "source"
@@ -68,21 +65,14 @@ COCO_DEFECT_PRIORITY = ("cut", "hole", "stain")
 IMG_SIZE = 256
 BG_COLOR = (244, 244, 246)
 
-CONDITIONS = ("nuovo", "buono", "usurato", "danneggiato")
+# "nuovo" fuso in "buono": su foto reali il confine era artificiale (solo
+# pieghe sintetiche leggere) e produceva confusione — vedi datasheet.
+CONDITIONS = ("buono", "usurato", "danneggiato")
 
 # Capi disegnabili come sagome nel bootstrap sintetico.
 SHAPE_CATEGORIES = (
     "t-shirt", "maglione", "pantaloni", "jeans", "gonna", "vestito",
 )
-
-# Mappa difetto -> defect della knowledge base tutorial (per il dataset VLM).
-DEFECT_TO_KB = {
-    "scolorimento": "scolorimento",
-    "macchia": "macchia",
-    "strappo": "strappo",
-    "buco": "buco",
-    "pilling": "scolorimento",  # il pilling lo trattiamo come cura del tessuto
-}
 
 
 @dataclass
@@ -350,12 +340,13 @@ def make_condition(base: Image.Image, condition: str, rng: random.Random
                    ) -> tuple[Image.Image, str | None, float]:
     """Applica le degradazioni corrispondenti allo stato. Ritorna
     (immagine, difetto_principale, severità)."""
-    if condition == "nuovo":
-        # capo come nuovo: nessuna degradazione, eventuale micro-luce
-        img = apply_wrinkles(base, 0.1, rng)
-        return img, None, 0.0
-
     if condition == "buono":
+        # Classe fusa (ex nuovo+buono): metà delle immagini restano quasi
+        # intatte, metà ricevono lievi pieghe — copre l'intero spettro
+        # "in buono stato" senza inventare un confine artificiale.
+        if rng.random() < 0.5:
+            img = apply_wrinkles(base, 0.1, rng)
+            return img, None, 0.0
         sev = rng.uniform(0.15, 0.35)
         img = apply_wrinkles(base, sev, rng)
         img = apply_fading(img, sev * 0.4, rng)
@@ -384,44 +375,7 @@ def make_condition(base: Image.Image, condition: str, rng: random.Random
 
 
 # ============================================================================
-# 4 · Dataset VLM (instruction tuning)
-# ============================================================================
-
-_VLM_INSTRUCTION = (
-    "Osserva la foto del capo di abbigliamento. Valuta il suo stato di "
-    "conservazione (nuovo, buono, usurato o danneggiato) e, se serve, "
-    "suggerisci un breve tutorial per migliorarlo. Rispondi in JSON."
-)
-
-
-def _vlm_record(sample: Sample, rel_image_path: str) -> dict:
-    """Costruisce un record instruction-tuning con risposta strutturata.
-
-    Il tutorial proviene dalla knowledge base hardcoded (`repair_tutorials`),
-    così le risposte sono coerenti e verificabili, non inventate."""
-    tutorial_text = None
-    if sample.defect:
-        kb_defect = DEFECT_TO_KB.get(sample.defect)
-        tut = repair_tutorials.get_tutorial(kb_defect, category=sample.category)
-        steps = " ".join(f"{i+1}) {s}" for i, s in enumerate(tut.steps))
-        tutorial_text = f"{tut.title}. {steps}"
-
-    answer = {
-        "stato": sample.condition,
-        "difetto": sample.defect,
-        "tutorial": tutorial_text,
-    }
-    return {
-        "image": rel_image_path,
-        "messages": [
-            {"role": "user", "content": f"<image>\n{_VLM_INSTRUCTION}"},
-            {"role": "assistant", "content": json.dumps(answer, ensure_ascii=False)},
-        ],
-    }
-
-
-# ============================================================================
-# 5 · Build
+# 4 · Build
 # ============================================================================
 
 
@@ -520,12 +474,6 @@ def build(per_class: int, seed: int, *, use_coco: bool = True,
             w.writerow([s.filename, s.category, s.color, s.condition,
                         s.defect or "", s.severity, s.split])
 
-    # vlm_dataset.jsonl
-    vlm_path = OUT_DIR / "vlm_dataset.jsonl"
-    with vlm_path.open("w", encoding="utf-8") as f:
-        for s in samples:
-            f.write(json.dumps(_vlm_record(s, s.filename), ensure_ascii=False) + "\n")
-
     # preview.png (un esempio per stato)
     _write_preview(samples)
 
@@ -538,11 +486,10 @@ def build(per_class: int, seed: int, *, use_coco: bool = True,
     print(f"    Per stato:  {dict(by_cond)}")
     print(f"    Per split:  {dict(by_split)}")
     print(f"    manifest:   {manifest_path.relative_to(ROOT)}")
-    print(f"    VLM jsonl:  {vlm_path.relative_to(ROOT)}")
     if coco:
         n_real = sum(1 for s in samples if s.condition == "danneggiato")
         print(f"    NB: i {n_real} 'danneggiato' sono foto con DIFETTI REALI (COCO);")
-        print("        nuovo/buono da foto reali pulite; usurato = pulite + sintesi.")
+        print("        buono da foto reali pulite; usurato = pulite + sintesi.")
     elif not use_source:
         print("    NB: immagini sintetiche (bootstrap). Per il training reale,")
         print(f"        metti foto vere in {SOURCE_DIR.relative_to(ROOT)} e rilancia.")

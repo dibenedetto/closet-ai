@@ -16,12 +16,9 @@ export interface DiagnoseResponse {
   wear_count: number
   days_owned: number | null
   rationale: string
-  /** Backend usato: "vlm-lora" | "clip-mlp" | "heuristic" */
+  /** Backend usato: "clip-mlp" | "heuristic" */
   source: string
   confidence: number | null
-  /** Difetto e tutorial valorizzati solo dal backend VLM (Approccio C) */
-  defect: string | null
-  tutorial: string | null
   suggestions: ActionSuggestion[]
 }
 
@@ -41,18 +38,6 @@ export interface ImpactStats {
   co2_by_type: Record<string, number>
   retired_items_count: number
   repaired_items_count: number
-}
-
-export interface RepairTutorial {
-  defect: string
-  category: string | null
-  title: string
-  difficulty: string
-  time_minutes: number
-  materials: string[]
-  steps: string[]
-  source: string
-  llm_enrichment_available: boolean
 }
 
 export async function diagnoseItem(itemId: number): Promise<DiagnoseResponse> {
@@ -98,22 +83,4 @@ export async function deleteAction(actionId: number): Promise<void> {
 
 export async function getImpactStats(): Promise<ImpactStats> {
   return jsonOrThrow<ImpactStats>(await fetch(`${API_BASE}/stats/impact`))
-}
-
-export async function listSupportedDefects(): Promise<string[]> {
-  const body = await jsonOrThrow<{ defects: string[] }>(
-    await fetch(`${API_BASE}/repair-tutorials/defects`),
-  )
-  return body.defects
-}
-
-export async function getRepairTutorial(
-  defect: string,
-  category?: string,
-): Promise<RepairTutorial> {
-  const params = new URLSearchParams({ defect })
-  if (category) params.set('category', category)
-  return jsonOrThrow<RepairTutorial>(
-    await fetch(`${API_BASE}/repair-tutorials?${params.toString()}`),
-  )
 }

@@ -15,8 +15,12 @@ tutta la presentazione:
 
     🟦  AI PRE-ADDESTRATA   (Fashion-CLIP — riconosce i capi)
     🟩  AI ALLENATA DA NOI  (rete stato, gap analysis)
-    🟪  AI GENERATIVA       (LLM/VLM/diffusion — testi, tutorial, immagini)
+    🟪  AI GENERATIVA       (LLM/diffusion — descrizioni, coach, try-on)
     🟨  REGOLE / TABELLE    (wear log, cost-per-wear, colore, CO₂)
+
+Ogni slide porta anche delle **note oratore** (script della parte orale da
+esporre al professore) — visibili in PowerPoint nella vista Presentatore o
+nel riquadro Note.
 
 Uso::
 
@@ -185,6 +189,11 @@ def _new_slide(prs: Presentation):
     return slide
 
 
+def _add_notes(slide, text: str) -> None:
+    """Testo da esporre a voce, letto dal presentatore (non proiettato)."""
+    slide.notes_slide.notes_text_frame.text = text
+
+
 # ============================================================================
 # Helper per le slide-tappa (doppia lente utente / tecnico)
 # ============================================================================
@@ -192,7 +201,7 @@ def _new_slide(prs: Presentation):
 
 def _tappa(prs, page, *, n, kicker, story_title, subtitle,
            user_lines, tech_categories, tech_lines,
-           screenshot=None, screenshot_caption=""):
+           screenshot=None, screenshot_caption="", notes=""):
     """Slide a due colonne: 👤 lato utente | ⚙️ lato tecnico (con badge categorie)."""
     slide = _new_slide(prs)
     _add_slide_title(slide, story_title, kicker=f"Tappa {n} · {kicker}", subtitle=subtitle)
@@ -229,6 +238,8 @@ def _tappa(prs, page, *, n, kicker, story_title, subtitle,
     _set_card_text(tcard, lines)
 
     _add_footer(slide, page)
+    if notes:
+        _add_notes(slide, notes)
     return slide
 
 
@@ -260,6 +271,13 @@ def slide_01_title(prs, page):
     _add_textbox(slide, Inches(0.9), Inches(6.3), Inches(11), Inches(0.4),
                  "Marco Di Benedetto · A.A. 2025/2026", size=14, color=MUTED)
     _ = page
+    _add_notes(slide,
+        "Buongiorno, presento ClosetAI: un guardaroba intelligente che aiuta a "
+        "vestire meglio comprando meno. Il prototipo copre l'intero ciclo di vita "
+        "di un capo — dalla foto al fine vita — e lo racconto come una storia in "
+        "sei tappe. A ogni tappa mostro due cose: cosa vede e fa l'utente, e cosa "
+        "succede dietro le quinte a livello tecnico. È il filo conduttore di tutta "
+        "la presentazione, quindi lo terrò esplicito slide per slide.")
 
 
 def slide_02_problem(prs, page):
@@ -289,6 +307,14 @@ def slide_02_problem(prs, page):
             ("•  Buttiamo invece di riparare, scambiare o donare", {"size": 14}),
         ])
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Il punto di partenza è la scala del problema: la moda pesa per circa il "
+        "10% delle emissioni globali di CO₂, e in Europa buttiamo 5 milioni di "
+        "tonnellate di vestiti l'anno, spesso quasi nuovi — un capo fast fashion "
+        "viene indossato in media solo 7 volte. Ma il problema non è solo "
+        "industriale, è anche domestico: compriamo d'impulso senza sapere cosa "
+        "abbiamo già, dimentichiamo capi in armadio, e buttiamo invece di "
+        "riparare o donare. ClosetAI attacca proprio questi tre comportamenti.")
 
 
 def slide_03_story_intro(prs, page):
@@ -322,7 +348,7 @@ def slide_03_story_intro(prs, page):
     legend = [
         ("pre", "Riconosce, da un modello già addestrato da altri.\nEs. Fashion-CLIP riconosce i capi."),
         ("own", "Una rete che abbiamo addestrato noi.\nEs. stato del capo, vuoti del guardaroba."),
-        ("gen", "Produce contenuti nuovi (testi, immagini).\nEs. tutorial, descrizioni, try-on."),
+        ("gen", "Produce contenuti nuovi (testi, immagini).\nEs. descrizioni, coach, try-on virtuale."),
         ("rule", "Logica esplicita e trasparente, niente ML.\nEs. cost-per-wear, tabella CO₂."),
     ]
     lw = Inches(3.0)
@@ -335,6 +361,16 @@ def slide_03_story_intro(prs, page):
             (desc, {"size": 11, "color": MUTED, "align": PP_ALIGN.CENTER}),
         ])
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Il capo che seguiamo attraversa sei momenti: lo fotografo, lo indosso, "
+        "chiedo cosa mettermi, si rovina, mi chiedo se mi serve altro, e infine "
+        "lo lascio andare. Questa è la mappa di tutta la presentazione. "
+        "Prima di entrare nel dettaglio, fisso la legenda: useremo sempre lo "
+        "stesso codice colore per capire CHE TIPO di intelligenza sta lavorando — "
+        "blu per un modello pre-addestrato da altri, verde per le reti che "
+        "abbiamo addestrato noi, viola per l'AI generativa che crea contenuti "
+        "nuovi, giallo per la logica a regole, esplicita e trasparente. Tenetela "
+        "a mente: la ritroverete a ogni tappa.")
 
 
 def slide_04_tappa_riconosci(prs, page):
@@ -360,6 +396,16 @@ def slide_04_tappa_riconosci(prs, page):
             ("Riaddestrarla servirebbero decine di migliaia di", {"size": 11, "color": MUTED, "space_after": 2}),
             ("foto etichettate: la usiamo già pronta.", {"size": 11, "color": MUTED}),
         ],
+        notes=(
+            "Prima tappa: Marco compra un capo e lo fotografa. Niente form da "
+            "compilare — la foto passa a Fashion-CLIP, un modello pre-addestrato "
+            "su circa 700 mila immagini di moda, che riconosce categoria e colore "
+            "e produce anche un embedding visivo, un vettore che userò più avanti "
+            "per la varietà degli outfit. Perché non l'abbiamo addestrato noi? "
+            "Perché sarebbe irrazionale: servirebbero decine di migliaia di foto "
+            "etichettate per un problema che qualcuno ha già risolto meglio di "
+            "quanto potremmo fare noi con le risorse di un progetto universitario."
+        ),
     )
 
 
@@ -385,6 +431,16 @@ def slide_05_tappa_indosso(prs, page):
             ("e una soglia. Una rete qui sarebbe inutile e meno", {"size": 11, "color": MUTED, "space_after": 2}),
             ("affidabile di un conto che torna sempre.", {"size": 11, "color": MUTED}),
         ],
+        notes=(
+            "Seconda tappa: l'uso reale. Un tap su 'indossato oggi' registra "
+            "l'evento, e da lì calcoliamo due metriche semplici ma potenti: il "
+            "cost-per-wear, cioè prezzo diviso numero di utilizzi — quanto ti è "
+            "davvero costato quel capo — e i capi 'fantasma', quelli mai indossati "
+            "dopo N giorni. Qui uso deliberatamente delle regole e non una rete "
+            "neurale: sono formule esatte, trasparenti, verificabili a mano. "
+            "Un modello ML introdurrebbe incertezza dove non ne serve: la "
+            "matematica qui è già la risposta giusta."
+        ),
     )
 
 
@@ -410,33 +466,60 @@ def slide_06_tappa_outfit(prs, page):
             ("Un mix: la logica estetica è scritta a mano,", {"size": 11, "italic": True, "color": MUTED, "space_after": 2}),
             ("ma sfrutta la 'percezione' del modello pre-addestrato.", {"size": 11, "italic": True, "color": MUTED}),
         ],
+        notes=(
+            "Terza tappa: 'cosa mi metto oggi?'. Il recommender combina tre "
+            "ingredienti: regole di compatibilità cromatica scritte a mano — "
+            "colori complementari, presenza di neutri — un filtro sul meteo del "
+            "giorno via l'API Open-Meteo, e un bonus di varietà che sfrutta "
+            "l'embedding di Fashion-CLIP per non riproporre sempre le stesse "
+            "combinazioni. È un esempio di mix consapevole: la logica estetica "
+            "resta esplicita e ispezionabile, ma appoggiata sulla percezione del "
+            "modello pre-addestrato per la parte che sarebbe troppo costoso "
+            "codificare a mano."
+        ),
     )
 
 
 def slide_07_tappa_rovinato(prs, page):
     _tappa(
         prs, page, n=4, kicker="«Si è rovinato»",
-        story_title="L'app capisce lo stato e spiega come salvarlo.",
-        subtitle="Qui lavorano insieme una rete nostra e l'AI generativa.",
+        story_title="L'app riconosce lo stato dalla foto.",
+        subtitle="La nostra prima rete neurale, e la sua validazione onesta.",
         user_lines=[
             ("Marco fotografa un capo logoro.", {"size": 15, "bold": True, "space_after": 10}),
-            ("L'app gli dice se è usurato o", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("danneggiato, e gli propone un", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("tutorial di riparazione scritto su", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("misura per quel capo — invece di", {"size": 13, "color": MUTED, "space_after": 4}),
-            ("buttarlo.", {"size": 13, "color": MUTED}),
+            ("L'app gli dice se è in buono stato,", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("usurato o danneggiato — e da lì", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("parte il suggerimento dell'azione", {"size": 13, "color": MUTED, "space_after": 4}),
+            ("circolare migliore (tappa 6).", {"size": 13, "color": MUTED}),
         ],
-        tech_categories=["own", "gen"],
+        tech_categories=["own"],
         tech_lines=[
-            ("Due AI in sequenza", {"size": 15, "bold": True, "space_after": 6}),
-            ("🟩 Rete dello STATO (addestrata da noi)", {"size": 12, "bold": True, "color": OWN, "space_after": 2}),
-            ("dalla foto → nuovo / usurato / danneggiato.", {"size": 11, "color": MUTED, "space_after": 8}),
-            ("🟪 Tutorial GENERATIVO", {"size": 12, "bold": True, "color": GEN, "space_after": 2}),
-            ("un LLM/VLM scrive le istruzioni di riparazione", {"size": 11, "color": MUTED, "space_after": 2}),
-            ("personalizzate sul capo (colore, punto del danno).", {"size": 11, "color": MUTED, "space_after": 8}),
-            ("Riconoscere lo stato = classificare (rete nostra).", {"size": 11, "italic": True, "color": MUTED, "space_after": 2}),
-            ("Scrivere il tutorial = creare testo (generativa).", {"size": 11, "italic": True, "color": MUTED}),
+            ("Rete dello STATO (addestrata da noi)", {"size": 15, "bold": True, "space_after": 6}),
+            ("Fashion-CLIP (frozen) → MLP 512→256→128→3", {"size": 12, "color": MUTED, "space_after": 8}),
+            ("Validazione onesta:", {"size": 12, "bold": True, "color": OWN, "space_after": 2}),
+            ("dati sintetici → 96% (sovrastima) · su foto reali", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("con difetti veri (dataset COCO) crolla al 60%.", {"size": 11, "color": MUTED, "space_after": 4}),
+            ("Causa: confine artificiale fra due classi troppo", {"size": 11, "color": MUTED, "space_after": 2}),
+            ("simili. Fuse in 3 classi oneste → 94% reale.", {"size": 11, "color": MUTED, "space_after": 8}),
+            ("Un errore trovato e corretto, non nascosto.", {"size": 11, "italic": True, "color": MUTED}),
         ],
+        notes=(
+            "Quarta tappa, e la parte di cui vado più fiero dal punto di vista "
+            "metodologico. Una foto entra in Fashion-CLIP, che dà l'embedding, e "
+            "sopra quell'embedding abbiamo addestrato noi un piccolo MLP che "
+            "predice lo stato di conservazione. Sul dataset sintetico arrivavamo "
+            "al 96%, un numero bellissimo ma sospetto. Appena l'ho testato su "
+            "foto reali con difetti veri, l'accuracy è crollata al 60% — un "
+            "classico domain gap. Invece di nasconderlo, l'ho investigato: la "
+            "confusione era quasi tutta fra due classi, 'nuovo' e 'buono', "
+            "indistinguibili su foto reali. Le ho fuse in un'unica classe e "
+            "l'accuracy onesta è risalita al 94%, con il danneggiato riconosciuto "
+            "quasi perfettamente. Un promemoria: le vecchie feature legate al "
+            "tutorial di riparazione generato via VLM sono state rimosse dal "
+            "prodotto in una revisione successiva, perché aggiungevano "
+            "complessità senza un beneficio proporzionato — coerenti col "
+            "principio MVP first che ripeto più avanti."
+        ),
     )
 
 
@@ -464,6 +547,18 @@ def slide_08_tappa_serve(prs, page):
             ("Cattura combinazioni sfumate fra molti fattori,", {"size": 11, "color": MUTED, "space_after": 2}),
             ("e migliorerà col feedback reale degli utenti.", {"size": 11, "color": MUTED}),
         ],
+        notes=(
+            "Quinta tappa: prima di comprare, conviene guardare l'armadio nel "
+            "suo insieme. Qui cambia livello: non guardiamo più una foto ma i "
+            "dati aggregati che Fashion-CLIP ha già prodotto capo per capo — "
+            "quanti per categoria, quali colori, quanto vengono usati. Una "
+            "seconda rete che abbiamo addestrato noi, multi-label, impara a "
+            "riconoscere i vuoti funzionali: manca una giacca, ci sono troppe "
+            "t-shirt. È addestrata su un dataset sintetico con etichette da "
+            "regole esperte più rumore, così la rete impara le soglie invece di "
+            "copiarle: un limite dichiarato, che miglioreremmo con feedback "
+            "reale degli utenti."
+        ),
     )
 
 
@@ -490,6 +585,17 @@ def slide_09_tappa_circolare(prs, page):
             ("autorevoli: meglio un numero citabile e trasparente", {"size": 11, "color": MUTED, "space_after": 2}),
             ("che una scatola nera.", {"size": 11, "color": MUTED}),
         ],
+        notes=(
+            "Sesta e ultima tappa del ciclo di vita: il capo non serve più a "
+            "Marco. In base allo stato diagnosticato alla tappa 4, l'app "
+            "suggerisce l'azione più coerente con la gerarchia dell'economia "
+            "circolare — riparare prima di riciclare, rivendere o donare prima "
+            "di buttare — e stima i kg di CO₂ evitati con una tabella per "
+            "categoria di capo, presa da fonti LCA autorevoli come la Ellen "
+            "MacArthur Foundation. Anche qui niente rete neurale: la relazione "
+            "materiale-impatto è già nota, e una rete darebbe solo falsa "
+            "precisione dove serve invece un numero trasparente e citabile."
+        ),
     )
 
 
@@ -513,6 +619,15 @@ def slide_10_dashboard(prs, page):
         ("misurabile e personale.", {"size": 12, "italic": True, "color": MUTED}),
     ])
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Tutte e sei le tappe convergono qui, nella dashboard impatto: CO₂ "
+        "evitata tradotta in km d'auto risparmiati per renderla tangibile, capi "
+        "salvati dalla discarica, il cost-per-wear di tutto il guardaroba, i "
+        "vuoti funzionali da colmare o no, e un coach — questo sì AI generativa, "
+        "un LLM via litellm — che scrive un consiglio personalizzato basato sui "
+        "dati reali dell'utente. È il momento in cui la sostenibilità smette di "
+        "essere un'affermazione astratta e diventa un numero personale e "
+        "motivante.")
 
 
 def slide_11_pipeline(prs, page):
@@ -538,7 +653,7 @@ def slide_11_pipeline(prs, page):
                  "📷  PER OGNI CAPO · dalla foto", size=11, bold=True, color=INK)
     row(Inches(2.08), [
         ("Fashion-CLIP", "🟦 pre-addestrata", "→ categoria + colore (+ embedding)", PRE, PRE_SOFT),
-        ("Rete stato + tutorial", "🟩 nostra + 🟪 generativa", "→ stato + tutorial di recupero", OWN, OWN_SOFT),
+        ("Rete stato del capo", "🟩 nostra", "→ buono / usurato / danneggiato", OWN, OWN_SOFT),
         ("Tabella CO₂", "🟨 regole", "→ impatto di produzione", RULE, RULE_SOFT),
     ])
     _add_textbox(slide, Inches(0.6), Inches(3.48), Inches(12), Inches(0.3),
@@ -556,6 +671,16 @@ def slide_11_pipeline(prs, page):
         ("Somma impatti evitati", "🟨 calcolo", "→ CO₂ totale → dashboard", RULE, RULE_SOFT),
     ])
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Riassumo tutto in un'unica vista, su tre livelli. Per ogni singola "
+        "foto lavorano tre motori: Fashion-CLIP pre-addestrato, la nostra rete "
+        "dello stato, la tabella CO₂. Nel tempo, ogni 'indossato oggi' alimenta "
+        "wear log, cost-per-wear e capi fantasma, tutta logica a regole. E "
+        "sull'intero guardaroba lavorano l'outfit recommender e la rete di gap "
+        "analysis, fino alla somma degli impatti evitati che arriva in "
+        "dashboard. Il messaggio di questa slide è che nessun livello dipende "
+        "da AI generativa nel suo cuore: quella la usiamo altrove, come "
+        "supporto opzionale, non come collante indispensabile della pipeline.")
 
 
 def slide_12_four_natures(prs, page):
@@ -568,8 +693,8 @@ def slide_12_four_natures(prs, page):
          "Quando il problema (riconoscere un capo) è\ngenerale e qualcun altro l'ha già risolto su\nmilioni di immagini. Non lo rifacciamo noi."),
         ("own", "AI ALLENATA DA NOI", "rete stato · gap analysis",
          "Quando il problema è specifico del nostro\ndominio e abbiamo (o generiamo) i dati per\ninsegnarlo. Qui dimostriamo il know-how ML."),
-        ("gen", "AI GENERATIVA", "LLM · VLM · diffusion",
-         "Quando serve creare contenuto nuovo e\npersonalizzato: tutorial di riparazione,\ndescrizioni, prova virtuale del capo."),
+        ("gen", "AI GENERATIVA", "LLM · diffusion",
+         "Quando serve creare contenuto nuovo e\npersonalizzato: descrizioni narrative,\ncoach di sostenibilità, prova virtuale."),
         ("rule", "REGOLE / TABELLE", "cost-per-wear · CO₂ · colore",
          "Quando la relazione è già nota, esatta e va\ntenuta trasparente. Una rete qui darebbe solo\nfalsa precisione e meno fiducia."),
     ]
@@ -586,6 +711,20 @@ def slide_12_four_natures(prs, page):
             (desc, {"size": 12, "color": INK}),
         ])
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Questa è la tesi tecnica del progetto: non 'AI ovunque', ma lo "
+        "strumento giusto per ogni problema, e la disciplina di sapere quando "
+        "NON usare AI. Pre-addestrata quando il problema è generale e già "
+        "risolto da altri su scala che non potremmo replicare. Allenata da noi "
+        "quando il problema è specifico del nostro dominio — qui dimostriamo il "
+        "know-how di machine learning vero e proprio. Generativa quando serve "
+        "contenuto nuovo e personalizzato. Regole quando la relazione è già "
+        "nota ed esatta. Una nota di onestà: avevamo prototipato anche un "
+        "quarto approccio, un modello generativo che scriveva tutorial di "
+        "riparazione dalla foto — funzionava, ma l'abbiamo rimosso in revisione "
+        "perché il valore aggiunto non giustificava la complessità di due "
+        "modelli vision-generativi extra da mantenere. Anche sapere cosa "
+        "togliere è parte del metodo MVP first.")
 
 
 def slide_13_feasibility(prs, page):
@@ -624,6 +763,17 @@ def slide_13_feasibility(prs, page):
             lines.append((it, {"size": 12, "color": INK, "space_after": 6}))
         _set_card_text(card, lines)
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Un progetto universitario deve anche reggere la domanda 'si può "
+        "portarlo sul mercato?'. Sui costi: hardware minimo — laptop e "
+        "telefono — modelli AI gratuiti o open-source, e un costo cloud "
+        "trascurabile grazie alla cache delle risposte LLM; lo specchio smart "
+        "opzionale costa sui 200 euro una tantum in componenti Raspberry Pi. "
+        "Sui materiali: stack interamente open-source, FastAPI, React, "
+        "Fashion-CLIP, Stable Diffusion, PyTorch — nessun lock-in su un "
+        "fornitore. Sulla scalabilità: partiamo single-user locale per "
+        "l'MVP, ma il percorso verso multi-utente su cloud, AI on-device per "
+        "la privacy, e un marketplace second-hand integrato è già chiaro.")
 
 
 def slide_14_limits(prs, page):
@@ -653,6 +803,18 @@ def slide_14_limits(prs, page):
             lines.append((f"•  {it}", {"size": 13, "color": INK, "space_after": 10}))
         _set_card_text(card, lines)
     _add_footer(slide, page)
+    _add_notes(slide,
+        "Chiudo con onestà intellettuale, che per me è parte integrante del "
+        "metodo, non un vezzo finale. I dataset delle reti che alleniamo noi "
+        "restano parzialmente sintetici e vanno validati su dati reali — "
+        "l'ho mostrato concretamente con la rete dello stato. Le stime CO₂ "
+        "sono medie per categoria, non ancora per materiale. Il try-on è "
+        "un'illusione visiva convincente ma non un vero camerino digitale. "
+        "Ed è personale: oggi niente account condivisi. Le estensioni naturali "
+        "sono altrettanto chiare: più foto reali, marketplace integrato, CO₂ "
+        "per materiale, e uno specchio smart che elabora tutto on-device senza "
+        "mai inviare foto in cloud — coerente col principio di privacy by "
+        "design che abbiamo seguito fin dall'inizio.")
 
 
 def slide_15_closing(prs, page):
@@ -677,6 +839,15 @@ def slide_15_closing(prs, page):
          {"size": 13, "color": MUTED}),
     ])
     _ = page
+    _add_notes(slide,
+        "Per chiudere: ClosetAI nasce da una storia in sei tappe, e in ogni "
+        "tappa ho cercato lo strumento giusto per il problema — non l'AI più "
+        "sofisticata possibile, ma quella più onesta. Un modello pre-addestrato "
+        "dove il problema è già risolto, una rete nostra dove serve know-how "
+        "specifico e l'abbiamo dimostrato con dati e validazione reali, l'AI "
+        "generativa dove serve creare contenuto, le regole trasparenti dove la "
+        "risposta è già nota. Grazie per l'attenzione, sono a disposizione per "
+        "domande.")
 
 
 # ============================================================================

@@ -10,7 +10,7 @@
 
 **Perché esiste questo dataset?**
 ClosetAI vuole diagnosticare dalla **foto** di un capo il suo stato di
-conservazione (`nuovo` / `buono` / `usurato` / `danneggiato`) e suggerire
+conservazione (`buono` / `usurato` / `danneggiato`) e suggerire
 un'azione (riparare, donare, riciclare). Per addestrare un modello che lo
 faccia, serve un dataset di immagini etichettate per stato d'usura.
 
@@ -28,36 +28,17 @@ etichettano categoria, colore, attributi — **mai lo stato di usura**.
 | `filename`   | percorso relativo dell'immagine                                  |
 | `category`   | categoria del capo (t-shirt, jeans, vestito, …)                  |
 | `color`      | colore dominante                                                 |
-| `condition`  | **etichetta target**: nuovo / buono / usurato / danneggiato      |
+| `condition`  | **etichetta target**: buono / usurato / danneggiato               |
 | `defect`     | difetto principale (scolorimento, pilling, macchia, strappo, buco) o vuoto |
 | `severity`   | gravità della degradazione applicata, 0.0–1.0                    |
 | `split`      | train / val / test (70 / 15 / 15, stratificato per stato)        |
 
-**Bilanciamento**: per costruzione le 4 classi sono bilanciate
-(default 60 immagini/classe → 240 totali; configurabile con `--per-class`).
+**Bilanciamento**: per costruzione le 3 classi sono bilanciate
+(default 60 immagini/classe → 180 totali; configurabile con `--per-class`).
 
 **Formati di output**:
 - `images/{stato}/*.png` — le immagini
 - `manifest.csv` — tabella di etichette
-- `vlm_dataset.jsonl` — formato instruction-tuning per Visual-LLM (LoRA):
-  ogni riga è `{image, messages:[user→<image>+istruzione, assistant→JSON
-  con stato+difetto+tutorial]}`. Due varianti dei **target**:
-  - **hardcoded** (default): il tutorial viene dalla knowledge base
-    ([`repair_tutorials.py`](../backend/app/services/repair_tutorials.py)) —
-    verificato ma fisso (8 tutorial, identici per ogni capo dello stesso
-    difetto).
-  - **distillato** (`vlm_dataset_distilled.jsonl`): il tutorial è generato
-    da un **VLM grande** che guarda la foto
-    ([`scripts/distill_tutorials.py`](../backend/scripts/distill_tutorials.py)),
-    quindi **personalizzato** su colore, posizione ed entità del danno. Un
-    campione dimostrativo è in `vlm_dataset_distilled_sample.jsonl`.
-
-  Esempio (stesso capo — pantaloni blu con strappo):
-
-  | | `difetto` | `tutorial` (estratto) |
-  | --- | --- | --- |
-  | hardcoded | `strappo` | "Riparare uno strappo con cucitura nascosta. 1) Stira… 2) Allinea…" |
-  | distillato | "strappo netto e diagonale … sulla gamba destra" | "Questi pantaloni blu hanno uno strappo … zona ad alta tensione: applica una toppa termoadesiva sul retro, poi punto scala con filo blu…" |
 - `preview.png` — griglia di anteprima (un esempio per stato)
 
 ---
@@ -76,7 +57,7 @@ augmentation per *damage simulation*).
    CC BY 4.0, ~1480 foto). Modalità **ibrida**:
    - `danneggiato` ← foto con **difetti veri annotati** (cut→strappo,
      hole→buco, stain→macchia): niente sintesi, etichetta dal COCO;
-   - `nuovo` / `buono` ← foto reali pulite (buono con lievi pieghe sintetiche);
+   - `buono` ← foto reali pulite (metà intatte, metà con lievi pieghe);
    - `usurato` ← foto pulite + fading/pilling sintetici (il COCO non ha la
      classe "consumato").
    Disattivabile con `--no-coco`.
@@ -117,12 +98,10 @@ Seed fisso (`--seed 42`) → generazione **riproducibile**.
 
 ## 4 · Usi previsti
 
-- **Approccio A**: addestrare una testa di classificazione leggera sopra
-  gli embedding di Fashion-CLIP (foto → embedding → stato).
-- **Approccio B**: fine-tuning di una CNN (ResNet/EfficientNet) per la
-  classificazione dello stato.
-- **Approccio C**: fine-tuning con LoRA di un Visual-LLM usando
-  `vlm_dataset.jsonl`, per output strutturato {stato, tutorial}.
+- **Approccio A** (adottato): addestrare una testa di classificazione
+  leggera sopra gli embedding di Fashion-CLIP (foto → embedding → stato).
+- **Approccio B** (non esplorato): fine-tuning di una CNN
+  (ResNet/EfficientNet) per la classificazione dello stato.
 
 **Usi sconsigliati**: qualsiasi conclusione su capi reali senza prima
 ri-generare il dataset a partire da **foto reali** (vedi limiti sotto).
@@ -155,8 +134,9 @@ ri-generare il dataset a partire da **foto reali** (vedi limiti sotto).
 > al 100% di recall. La confusione è concentrata in `nuovo ↔ buono`: due
 > classi di foto pulite reali distinte solo da pieghe sintetiche leggere —
 > un confine **artificiale del nostro labeling**, non un limite del modello.
-> Lezione: per separare nuovo/buono servono etichette umane reali (o la
-> fusione delle due classi).
+> **Decisione presa**: le due classi sono state FUSE in `buono` — con lo
+> schema a 3 classi oneste, sulla stessa base reale, il modello raggiunge
+> **test accuracy ~0.94** (danneggiato F1 0.98, precision 1.00).
 - **Bias di categoria/colore**: distribuzione uniforme artificiale, non
   rappresentativa di un guardaroba reale.
 - **Difetti semplificati**: un solo difetto dominante per immagine

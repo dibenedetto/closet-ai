@@ -202,9 +202,8 @@ Pipeline MVP (non IDM-VTON garment-aware):
 
 ## ADR-008 — LLM gateway via litellm (cloud + locale pluggable)
 
-**Contesto**: il PROJECT.md §4.2 elenca tre ruoli di AI generativa testuale:
+**Contesto**: il PROJECT.md §4.2 elenca due ruoli di AI generativa testuale:
 
-- **Tutorial di riparazione** dinamici.
 - **Descrizione narrativa** dei capi.
 - **Coach sostenibilità** sulla dashboard.
 
@@ -229,9 +228,6 @@ un solo env var, nessun cambio di codice.
 
 **Servizi che lo usano**:
 
-- `app/services/repair_tutorials.py::enrich_with_llm()` —
-  `GET /api/v1/repair-tutorials/enrich?defect=…` produce tutorial JSON
-  strutturati. Fallback alla KB hardcoded se l'LLM non risponde.
 - `app/services/descriptions.py::generate_item_description()` —
   `POST /api/v1/items/{id}/describe`, salva su `Item.description`.
 - `app/services/coach.py::generate_coach_message()` —
@@ -254,7 +250,7 @@ hardcoded, 503 al client).
 
 ## ADR-009 — Diagnosi stato di conservazione: rete addestrata da noi
 
-**Contesto**: la Fase 5 diagnosticava lo stato del capo (nuovo/buono/
+**Contesto**: la Fase 5 diagnosticava lo stato del capo (buono/
 usurato/danneggiato) con un'**euristica** su `wear_count` + età. Non guarda
 la foto: due capi comprati lo stesso giorno e indossati uguale ricevono lo
 stesso giudizio, anche se uno è strappato e l'altro intatto. Il requisito
@@ -264,121 +260,76 @@ stato **dalla foto**.
 **Decisione**: **Approccio A — testa MLP su embedding Fashion-CLIP**.
 
 ```
-foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (4 classi)
+foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (3 classi)
         [pre-addestrato]                              [addestrato DA NOI]
 ```
 
-La parte addestrata da noi è un MLP `512 → 256 → 128 → 4` (~170k parametri,
-dropout 0.3). Fashion-CLIP fa da feature extractor congelato.
+La parte addestrata da noi è un MLP `512 → 256 → 128 → 3` (~170k parametri,
+dropout 0.3). Fashion-CLIP fa da feature extractor congelato. Le 3 classi
+sono `buono` / `usurato` / `danneggiato` ("nuovo" è stato fuso in "buono":
+vedi sotto e la datasheet).
 
-**Perché A e non subito un VLM+LoRA**:
+**Perché A e non un VLM+LoRA**:
 
-- Gira su **CPU** in millisecondi (il VLM richiede GPU anche in inferenza).
+- Gira su **CPU** in millisecondi (un VLM richiede GPU anche in inferenza).
 - Riusa l'infrastruttura Fashion-CLIP già presente (un solo modello pesante
   caricato in RAM, non due).
 - Dataset più semplice da etichettare: serve solo (foto, stato), non testo.
-- Stabilisce un **baseline** misurabile prima di investire nel VLM.
+- Un Approccio C (VLM+LoRA per stato+tutorial) è stato prototipato e poi
+  **rimosso** insieme alla feature "tutorial di riparazione": vedi
+  ADR-010 (superata).
 
 **Dataset**: non esiste un dataset pubblico per lo stato di usura. Lo
-generiamo con **degradazione sintetica controllata**
-(`scripts/build_condition_dataset.py`, vedi
-[dataset-datasheet.md](dataset-datasheet.md)).
+generiamo con **degradazione sintetica controllata**, oppure — modalità
+preferita — a partire da foto reali con difetti annotati (dataset COCO
+"Defect-Clothes", vedi [dataset-datasheet.md](dataset-datasheet.md)).
 
-**Risultati baseline** (dati sintetici, 600 immagini, split 70/15/15):
+**Risultati** (percorso completo, dettagli nella datasheet):
 
-| Metrica            | Valore   |
-| ------------------ | -------- |
-| Test accuracy      | ~0.94    |
-| Confusione tipica  | usurato ↔ danneggiato (stati adiacenti) |
+| Dataset                              | Test accuracy | Note                                   |
+| ------------------------------------- | -------------- | --------------------------------------- |
+| Sintetico (bootstrap/FashionMNIST)    | ~0.94–0.96     | sovrastima: degradazioni "facili"       |
+| COCO reale, 4 classi                  | ~0.60          | domain gap: confusione in nuovo↔buono   |
+| **COCO reale, 3 classi (fuse)**       | **~0.94**      | danneggiato F1 0.98, precision 1.00     |
 
-> ⚠️ L'accuracy alta riflette la **separabilità dei dati sintetici**, non la
-> performance su foto reali. Il vero test sarà su un dataset reale; ci si
-> aspetta un calo (domain gap). Onestà metodologica documentata nella
-> datasheet.
+> Il passaggio ai dati reali ha reso visibile un domain gap atteso, poi
+> risolto fondendo "nuovo" e "buono" — un confine artificiale del nostro
+> labeling, non un limite del modello. Onestà metodologica documentata
+> nella datasheet.
 
 **Integrazione**: `services/condition.py::diagnose()` usa il modello se i
 pesi `ml/weights/condition_head.pt` esistono **e** il capo ha un'immagine
 leggibile; altrimenti ricade sull'euristica. Il campo `source`
-(`vision-model` | `heuristic`) e `confidence` sono esposti in
+(`clip-mlp` | `heuristic`) e `confidence` sono esposti in
 `GET/POST /diagnose`.
-
-**Evoluzione pianificata** (Fase 7.2): dataset reale → Approccio C
-(VLM + LoRA con output `{stato, tutorial}`), usando `vlm_dataset.jsonl` già
-prodotto dal builder. L'interfaccia di `diagnose()` resta invariata.
 
 ---
 
-## ADR-010 — Diagnosi stato, Approccio C: VLM + LoRA (scheletro)
+## ADR-010 — Diagnosi stato, Approccio C: VLM + LoRA (superata, rimossa)
 
-**Contesto**: l'Approccio A (ADR-009) predice solo lo **stato** con un MLP
-su embedding CLIP; il tutorial arriva da un secondo step (LLM). L'idea più
-ambiziosa è un **unico modello vision-generativo** che, dalla foto,
-produca direttamente stato **e** tutorial in JSON.
+**Contesto originale**: l'Approccio A (ADR-009) predice solo lo **stato**
+con un MLP su embedding CLIP. Per generare anche un **tutorial di
+riparazione** personalizzato, era stato prototipato un secondo approccio:
+un **unico modello vision-generativo** (fine-tuning LoRA di
+`Qwen/Qwen2-VL-2B-Instruct`) che, dalla foto, producesse direttamente
+stato **e** tutorial in JSON — con routing a cascata VLM → MLP →
+euristica, distillazione dei tutorial da un VLM grande, e integrazione
+production-ready in `services/condition.py`.
 
-**Decisione**: predisporre il **fine-tuning LoRA di un Visual-LLM**
-(default `Qwen/Qwen2-VL-2B-Instruct`) sul dataset `vlm_dataset.jsonl` già
-generato dal builder. Stato attuale: **scheletro completo e validato**
-(non ancora addestrato — richiede la GPU dell'utente).
+**Decisione (revisione)**: la feature "tutorial di riparazione" è stata
+**rimossa dal prodotto** (non solo il VLM: anche la knowledge base
+hardcoded e l'endpoint di arricchimento LLM). Motivazione: per l'MVP del
+corso il valore aggiunto di un how-to testuale generico era basso rispetto
+al costo di mantenere due modelli generativi/vision aggiuntivi (principio
+*MVP first*, CLAUDE.md). Il modulo circolare resta focalizzato su
+diagnosi stato + suggerimento azione (`riparazione` come azione loggabile
+resta, senza il testo guidato) + stima CO₂.
 
-**Componenti**:
-
-| File | Ruolo |
-| ---- | ----- |
-| `scripts/train_condition_vlm_lora.py` | training LoRA (PEFT) + `--dry-run` di validazione |
-| `app/ml/condition_vlm.py` | inferenza: base + adapter → JSON `{stato, difetto, tutorial}` |
-| `ml/datasets/garment_condition/vlm_dataset.jsonl` | dataset instruction-tuning (prodotto dal builder) |
-
-**Configurazione LoRA**: rank 16, alpha 32, dropout 0.05, target
-`q/k/v/o_proj` (attention), bf16. Opzione QLoRA 4-bit (`--load-4bit`,
-richiede `bitsandbytes`) per ridurre la VRAM.
-
-**Requisiti hardware**: GPU NVIDIA ~10-16 GB (full LoRA) o ~6-8 GB
-(QLoRA 4-bit). Su CPU non è praticabile.
-
-**Perché "scheletro" e non già addestrato**:
-
-- Il training scarica ~4 GB di pesi e richiede una GPU; lo lasciamo
-  all'ambiente dell'utente.
-- Il `--dry-run` valida dipendenze, GPU, dataset, formato e immagini senza
-  scaricare nulla — così il setup è verificabile subito.
-
-**Integrazione (production-ready)**: `services/condition.py` implementa un
-**routing a cascata** fra i tre backend, guidato da
-`CLOSETAI_CONDITION_BACKEND`:
-
-| Valore        | Comportamento                                                |
-| ------------- | ------------------------------------------------------------ |
-| `auto` (def.) | prova VLM → MLP → euristica, usa il primo disponibile        |
-| `vlm-lora`    | forza il VLM (fallback euristica se adapter assente)         |
-| `clip-mlp`    | forza l'MLP (fallback euristica se pesi assenti)             |
-| `heuristic`   | forza l'euristica                                            |
-
-Garanzie:
-
-- **Fail-safe**: `diagnose()` restituisce *sempre* uno stato valido — se il
-  backend scelto non è disponibile o produce output non valido (stato fuori
-  dalle 4 classi), ricade automaticamente sull'euristica.
-- **Output validato**: l'output del VLM passa per `_normalize_condition()`
-  (sinonimi → label canoniche; stato sconosciuto → fallback).
-- **Tutorial inline**: quando il backend è il VLM, `DiagnoseResponse`
-  include `defect` e `tutorial` (gli altri backend li lasciano `null` e il
-  tutorial si ottiene da `/repair-tutorials`).
-- **Test**: routing, fallback a cascata, parsing/validazione, forzature —
-  coperti con un VLM fittizio (no GPU richiesta in CI).
-
-> ⚠️ Latenza: la generazione VLM richiede secondi (GPU). In `POST /diagnose`
-> la chiamata è sincrona; per volumi alti andrà spostata in background
-> (task queue) — non necessario per il prototipo.
-
-**Caveat dati**: i tutorial del dataset base provengono dalla KB hardcoded.
-Per target più ricchi e personalizzati si usa la **distillazione**
-(`scripts/distill_tutorials.py`): un VLM grande (Claude, GPT-4o, o un VLM
-locale via Ollama) guarda ogni foto e scrive un tutorial specifico su
-colore, posizione ed entità del danno. L'output è
-`vlm_dataset_distilled.jsonl`, drop-in per il training LoRA al posto del
-jsonl base. La funzione multimodale è `app/services/llm.py::generate_vision()`
-(immagine base64 → litellm). Vedi la datasheet per il confronto
-hardcoded vs distillato.
+Codice rimosso: `app/ml/condition_vlm.py`, `app/services/repair_tutorials.py`,
+`scripts/train_condition_vlm_lora.py`, `scripts/train_condition_vlm_pipeline.py`,
+`scripts/distill_tutorials.py`, endpoint `/repair-tutorials*`, campi
+`defect`/`tutorial` in `DiagnoseResponse`. Questo ADR resta come traccia
+storica della valutazione fatta (vedi cronologia in [PLAN.md](../PLAN.md)).
 
 ---
 
@@ -452,7 +403,6 @@ backend/app/
     ├── llm.py              # gateway litellm + DB cache
     ├── descriptions.py     # item description via LLM
     ├── coach.py            # coach sostenibilità via LLM
-    ├── repair_tutorials.py # KB hardcoded + enrich_with_llm()
     ├── condition.py        # diagnosi stato: modello vision + fallback euristica
     └── tryon.py            # backend astratto + DiffusersLocalBackend
 
@@ -460,17 +410,15 @@ backend/app/ml/
     ├── classifier.py       # Fashion-CLIP (+ embed_image come feature extractor)
     ├── color.py
     ├── condition_model.py  # Approccio A: MLP addestrato da noi (testa su CLIP)
-    ├── condition_vlm.py    # Approccio C: inferenza VLM + LoRA (scheletro)
     └── gap_model.py        # gap analysis: MLP multi-label su feature tabellari
 
 backend/app/services/
     └── gap_analysis.py     # feature dal guardaroba reale + predizione gap
 
 backend/scripts/
-    ├── build_condition_dataset.py    # genera il dataset (degradazione sintetica)
+    ├── build_condition_dataset.py    # genera il dataset (degradazione sintetica / COCO reale)
     ├── fetch_real_garments.py        # scarica capi reali (FashionMNIST)
     ├── train_condition_model.py      # Approccio A: MLP su embedding CLIP
-    ├── train_condition_vlm_lora.py   # Approccio C: LoRA su Qwen2-VL
     ├── build_wardrobe_dataset.py     # genera il dataset tabellare guardaroba
     └── train_gap_model.py            # addestra l'MLP multi-label di gap analysis
 ```
@@ -500,10 +448,8 @@ class ClassificationResult:
 | `CLOSETAI_LLM_TIMEOUT`          | `20` (sec)                           | runtime   | timeout chiamate LLM.                                      |
 | `CLOSETAI_LLM_MAX_TOKENS`       | `800`                                | runtime   | tetto generazione.                                         |
 | `CLOSETAI_LLM_CACHE_TTL_HOURS`  | `24`                                 | runtime   | TTL della tabella `llm_cache`.                             |
-| `CLOSETAI_CONDITION_BACKEND`    | `auto`                               | runtime   | `auto`/`vlm-lora`/`clip-mlp`/`heuristic` — routing diagnosi stato. |
+| `CLOSETAI_CONDITION_BACKEND`    | `auto`                               | runtime   | `auto`/`clip-mlp`/`heuristic` — routing diagnosi stato.    |
 | `CLOSETAI_CONDITION_WEIGHTS`    | `ml/weights/condition_head.pt`       | runtime   | pesi MLP (Approccio A).                                    |
-| `CLOSETAI_CONDITION_VLM_ADAPTER`| `ml/weights/condition_vlm_lora`      | runtime   | adapter LoRA (Approccio C).                                |
-| `CLOSETAI_CONDITION_VLM_BASE`   | `Qwen/Qwen2-VL-2B-Instruct`          | runtime   | modello base del VLM.                                      |
 | `CLOSETAI_TRYON_BACKEND`        | `disabled`                           | runtime   | `diffusers` per try-on locale.                             |
 | `CLOSETAI_TRYON_MODEL`          | `stabilityai/stable-diffusion-2-inpainting` | runtime | HF model id per try-on.                            |
 | `CLOSETAI_TRYON_DIR`            | `<DATA_DIR>/tryon`                   | runtime   | output try-on.                                             |

@@ -60,10 +60,10 @@ def test_diagnose_new_item_recently_added(client, png) -> None:
     r = client.post(f"/api/v1/items/{item['id']}/diagnose")
     assert r.status_code == 200
     body = r.json()
-    assert body["condition"] == "nuovo"
+    assert body["condition"] == "buono"  # "nuovo" fuso in "buono"
     assert body["wear_count"] == 0
     # persistita su Item
-    assert client.get(f"/api/v1/items/{item['id']}").json()["condition"] == "nuovo"
+    assert client.get(f"/api/v1/items/{item['id']}").json()["condition"] == "buono"
 
 
 def test_diagnose_marks_old_unused_as_usurato_or_worse(client, png) -> None:
@@ -233,32 +233,3 @@ def test_impact_stats_aggregates(client, png) -> None:
     assert body["actions_by_type"]["riparazione"] == 2
     assert body["retired_items_count"] == 1  # solo a
     assert body["repaired_items_count"] == 1  # solo b
-
-
-# ----- repair tutorials ----------------------------------------------------
-
-
-def test_repair_tutorials_supported_defects(client) -> None:
-    body = client.get("/api/v1/repair-tutorials/defects").json()
-    assert "strappo" in body["defects"]
-    assert "bottone" in body["defects"]
-    assert "zip" in body["defects"]
-
-
-def test_repair_tutorial_known_defect(client) -> None:
-    body = client.get(
-        "/api/v1/repair-tutorials", params={"defect": "strappo", "category": "jeans"}
-    ).json()
-    assert body["defect"] == "strappo"
-    assert body["category"] == "jeans"
-    assert body["steps"], "deve avere almeno un passo"
-    assert body["materials"]
-    assert body["source"] == "hardcoded"
-
-
-def test_repair_tutorial_unknown_defect_falls_back(client) -> None:
-    body = client.get(
-        "/api/v1/repair-tutorials", params={"defect": "unobtanium"}
-    ).json()
-    assert body["defect"] == "generico"
-    assert body["steps"]

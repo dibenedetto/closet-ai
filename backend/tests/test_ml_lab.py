@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 
-def test_models_status_lists_three_models(client) -> None:
+def test_models_status_lists_two_models(client) -> None:
     body = client.get("/api/v1/ml/models").json()
     keys = {m["key"] for m in body["models"]}
-    assert keys == {"condition-mlp", "gap-mlp", "condition-vlm-lora"}
+    assert keys == {"condition-mlp", "gap-mlp"}
     # Nei test i pesi puntano a path inesistenti → tutto non disponibile.
     assert all(m["available"] is False for m in body["models"])
     # Ogni modello dichiara natura e comando di training.
     for m in body["models"]:
-        assert m["nature"] in ("own", "gen")
+        assert m["nature"] == "own"
         assert m["train_command"].startswith("uv run")
 
 
@@ -42,7 +42,7 @@ def test_condition_predict_with_fake_classifier(client, png, monkeypatch) -> Non
             return ConditionPrediction(
                 condition="usurato",
                 confidence=0.77,
-                probabilities={"nuovo": 0.1, "buono": 0.1, "usurato": 0.77, "danneggiato": 0.03},
+                probabilities={"buono": 0.2, "usurato": 0.77, "danneggiato": 0.03},
             )
 
     monkeypatch.setattr(condition_model, "get_condition_classifier", lambda: FakeClf())
@@ -55,7 +55,7 @@ def test_condition_predict_with_fake_classifier(client, png, monkeypatch) -> Non
     body = r.json()
     assert body["condition"] == "usurato"
     assert body["confidence"] == 0.77
-    assert set(body["probabilities"]) == {"nuovo", "buono", "usurato", "danneggiato"}
+    assert set(body["probabilities"]) == {"buono", "usurato", "danneggiato"}
 
 
 def test_condition_predict_rejects_bad_mime(client, monkeypatch) -> None:

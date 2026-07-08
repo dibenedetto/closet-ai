@@ -89,15 +89,13 @@ def _reset_tryon_singleton() -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _reset_condition_model_singleton() -> Iterator[None]:
-    """Reset dei classifier di condizione (MLP + VLM) e gap tra test."""
-    from app.ml import condition_model, condition_vlm, gap_model
+    """Reset dei classifier di condizione (MLP) e gap tra test."""
+    from app.ml import condition_model, gap_model
 
     condition_model.reset_condition_classifier_cache()
-    condition_vlm.reset_condition_vlm_cache()
     gap_model.reset_gap_classifier_cache()
     yield
     condition_model.reset_condition_classifier_cache()
-    condition_vlm.reset_condition_vlm_cache()
     gap_model.reset_gap_classifier_cache()
 
 

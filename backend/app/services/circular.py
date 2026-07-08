@@ -93,13 +93,10 @@ def suggest_actions(
             )
         )
 
-    if cond == "nuovo":
-        add("vendita", "capo ancora nuovo: ottimo valore di rivendita", 1)
-        add("swap", "scambia con un capo simile", 2)
-        add("donazione", "metti a disposizione di chi ne ha bisogno", 3)
-    elif cond == "buono":
+    if cond == "buono":
+        # (include gli ex "nuovo": la classe è stata fusa)
+        add("vendita", "in buono stato: ottimo valore di rivendita", 1)
         add("swap", "scambialo con un capo di tuo gradimento", 1)
-        add("vendita", "vendi sui marketplace second-hand", 1)
         add("donazione", "donalo se non lo indossi", 2)
     elif cond == "usurato":
         add("riparazione", "alcune riparazioni mirate possono prolungarne la vita", 1)

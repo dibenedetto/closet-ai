@@ -1,22 +1,18 @@
 """Diagnosi della condizione del capo, con backend selezionabile.
 
-Tre strategie, in ordine di capacità decrescente:
+Due strategie, in ordine di capacità decrescente:
 
-1. **VLM + LoRA** (Approccio C, ADR-010): un Visual-LLM fine-tunato predice
-   dalla foto lo stato **e** un tutorial personalizzato in un colpo solo.
-   Richiede l'adapter addestrato + GPU.
+1. **MLP su Fashion-CLIP** (Approccio A, ADR-009): una testa addestrata da
+   noi predice lo stato dalla foto. Gira su CPU.
 
-2. **MLP su Fashion-CLIP** (Approccio A, ADR-009): una testa addestrata da
-   noi predice lo stato dalla foto (no tutorial). Gira su CPU.
-
-3. **Euristica** (fallback sempre disponibile): basata su numero di utilizzi
+2. **Euristica** (fallback sempre disponibile): basata su numero di utilizzi
    ed età del capo.
 
 La selezione è guidata da ``CLOSETAI_CONDITION_BACKEND``:
 
-- ``auto`` (default) → prova VLM, poi MLP, poi euristica (primo disponibile).
-- ``vlm-lora`` / ``clip-mlp`` / ``heuristic`` → forza un backend specifico
-  (con fallback all'euristica se quello richiesto non è utilizzabile).
+- ``auto`` (default) → prova MLP, poi euristica (primo disponibile).
+- ``clip-mlp`` / ``heuristic`` → forza un backend specifico (con fallback
+  all'euristica se quello richiesto non è utilizzabile).
 """
 
 from __future__ import annotations
@@ -34,10 +30,11 @@ from app.models import Item, WearEvent
 
 log = logging.getLogger(__name__)
 
-CONDITIONS = ("nuovo", "buono", "usurato", "danneggiato")
+# "nuovo" è stato fuso in "buono" (vedi ADR-009): su foto reali il confine
+# fra i due era artificiale e indistinguibile.
+CONDITIONS = ("buono", "usurato", "danneggiato")
 
 # Sorgenti possibili, esposte nel campo `source` del risultato.
-SOURCE_VLM = "vlm-lora"
 SOURCE_MLP = "clip-mlp"
 SOURCE_HEURISTIC = "heuristic"
 
@@ -50,8 +47,6 @@ class DiagnosisResult:
     rationale: str
     source: str = SOURCE_HEURISTIC
     confidence: float | None = None
-    defect: str | None = None
-    tutorial: str | None = None  # popolato solo dal VLM
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +66,8 @@ def _age_in_days(item: Item, today: date) -> int | None:
 def _classify(wear_count: int, days_owned: int | None) -> tuple[str, str]:
     age = days_owned if days_owned is not None else 0
     if wear_count == 0 and age < 60:
-        return "nuovo", f"mai indossato, posseduto da {age} giorni"
+        # classe "nuovo" fusa in "buono" (ADR-009)
+        return "buono", f"mai indossato, posseduto da {age} giorni"
     if wear_count > 80 or age > 1825:
         return "danneggiato", f"{wear_count} utilizzi su {age} giorni: usura significativa"
     if wear_count > 30 or age > 730:
@@ -133,44 +129,12 @@ def _try_mlp(item: Item, wear_count: int, days_owned: int | None) -> DiagnosisRe
     )
 
 
-def _try_vlm(item: Item, wear_count: int, days_owned: int | None) -> DiagnosisResult | None:
-    image_path = _readable_image(item)
-    if image_path is None:
-        return None
-    try:
-        from app.ml.condition_vlm import get_condition_vlm
-
-        vlm = get_condition_vlm()
-        if vlm is None:
-            return None
-        diag = vlm.diagnose(image_path)
-    except Exception:
-        log.warning("Diagnosi VLM fallita per item=%s", item.id, exc_info=True)
-        return None
-
-    # Il VLM deve almeno produrre uno stato valido; altrimenti scartiamo.
-    if diag.condition is None:
-        log.info("VLM non ha prodotto uno stato valido per item=%s, fallback", item.id)
-        return None
-
-    return DiagnosisResult(
-        condition=diag.condition,
-        wear_count=wear_count,
-        days_owned=days_owned,
-        rationale="diagnosi dalla foto (VLM fine-tunato)",
-        source=SOURCE_VLM,
-        confidence=None,
-        defect=diag.defect,
-        tutorial=diag.tutorial,
-    )
-
-
 # ---------------------------------------------------------------------------
 # Orchestrazione
 # ---------------------------------------------------------------------------
 
 # Ordine di tentativi per la modalità "auto".
-_AUTO_CHAIN = (_try_vlm, _try_mlp)
+_AUTO_CHAIN = (_try_mlp,)
 
 
 def diagnose(db: Session, item: Item, *, today: date | None = None) -> DiagnosisResult:
@@ -183,10 +147,6 @@ def diagnose(db: Session, item: Item, *, today: date | None = None) -> Diagnosis
 
     if backend == SOURCE_HEURISTIC:
         return _heuristic_result(item, wear_count, days_owned)
-
-    if backend == SOURCE_VLM:
-        result = _try_vlm(item, wear_count, days_owned)
-        return result or _heuristic_result(item, wear_count, days_owned)
 
     if backend == SOURCE_MLP:
         result = _try_mlp(item, wear_count, days_owned)

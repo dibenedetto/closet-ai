@@ -19,7 +19,7 @@ Il sistema dimostra l'AI in due ruoli distinti:
 - **Machine learning applicato** come componente funzionale del prodotto:
   classificazione capi, recommendation di outfit, diagnosi difetti.
 - **AI generativa** come supporto al design e all'esperienza: UI/UX,
-  tutorial, try-on virtuale.
+  descrizioni narrative, try-on virtuale.
 
 ---
 
@@ -93,7 +93,7 @@ dell'AI, soddisfacendo i requisiti didattici del corso.
 ### 4.2 AI generativa (supporto al design e all'esperienza)
 
 - **Progettazione UI/UX** con strumenti tipo v0, Figma AI.
-- **Tutorial di riparazione** generati da LLM personalizzati sul capo.
+- **Descrizioni narrative** dei capi e coach di sostenibilità via LLM.
 - **Try-on virtuale** tramite modelli diffusion (es. IDM-VTON).
 - **Asset visivi** per la demo e la documentazione.
 
@@ -111,9 +111,8 @@ LIVELLO CAPO  ·  per ogni foto caricata
                   ┌───▶│ Fashion-CLIP  (pre-addestrato)│──▶ (+ embedding visivo,
                   │    └──────────────────────────────┘    usato dal recommender)
    📷  foto del   │    ┌──────────────────────────────┐    stato del capo
-       capo  ─────┼───▶│ Rete stato  (addestrata da noi)│──▶ (nuovo/usurato/
-                  │    │   + VLM → tutorial            │    danneggiato)
-                  │    └──────────────────────────────┘──▶ tutorial di recupero
+       capo  ─────┼───▶│ Rete stato  (addestrata da noi)│──▶ (buono/usurato/
+                  │    └──────────────────────────────┘    danneggiato)
                   │    ┌──────────────────────────────┐
                   └───▶│ Tabella CO₂  (Ellen MacArthur)│──▶ impatto di produzione
                        └──────────────────────────────┘
@@ -146,7 +145,7 @@ LIVELLO GUARDAROBA  ·  sull'insieme dei capi
    e lo etichetta (categoria, colore); produce anche un **embedding visivo**
    riusato per la varietà degli outfit. Risponde a *"cos'è questo capo?"*.
 2. La **rete dello stato** (addestrata da noi) valuta l'usura dalla stessa
-   foto; nella variante VLM produce anche il **tutorial di recupero**.
+   foto.
 3. La **tabella CO₂** stima l'impatto di produzione del capo.
 4. Ogni "indossato oggi" alimenta il **wear log**: da lì il sistema calcola
    il **cost-per-wear** (quanto ti è costato a utilizzo) e identifica i

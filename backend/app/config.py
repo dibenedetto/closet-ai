@@ -42,11 +42,10 @@ LLM_MAX_TOKENS: int = int(os.environ.get("CLOSETAI_LLM_MAX_TOKENS", "800"))
 LLM_CACHE_TTL_HOURS: int = int(os.environ.get("CLOSETAI_LLM_CACHE_TTL_HOURS", "24"))
 
 # Diagnosi stato del capo. Strategia di selezione del backend:
-#   "auto" (default) → prova vlm-lora, poi clip-mlp, poi heuristic (primo disponibile)
-#   "vlm-lora"       → forza il VLM fine-tunato (richiede adapter + GPU)
+#   "auto" (default) → prova clip-mlp, poi heuristic (primo disponibile)
 #   "clip-mlp"       → forza la testa MLP su embedding CLIP (richiede pesi)
 #   "heuristic"      → forza l'euristica wear_count + età (sempre disponibile)
-# Vedi ADR-009 / ADR-010 in docs/architecture.md.
+# Vedi ADR-009 in docs/architecture.md.
 CONDITION_BACKEND: str = os.environ.get("CLOSETAI_CONDITION_BACKEND", "auto")
 
 # Try-on virtuale via diffusers: backend "diffusers" (locale) o "disabled".

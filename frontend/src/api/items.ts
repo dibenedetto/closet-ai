@@ -1,6 +1,7 @@
 import { API_BASE, asError, jsonOrThrow } from './client'
 
-export type Condition = 'nuovo' | 'buono' | 'usurato' | 'danneggiato'
+/** "nuovo" è stato fuso in "buono": su foto reali erano indistinguibili. */
+export type Condition = 'buono' | 'usurato' | 'danneggiato'
 
 export interface Item {
   id: number

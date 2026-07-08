@@ -7,7 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Condition = Literal["nuovo", "buono", "usurato", "danneggiato"]
+# "nuovo" fuso in "buono" (ADR-009): su foto reali erano indistinguibili.
+Condition = Literal["buono", "usurato", "danneggiato"]
 ActionType = Literal["riparazione", "swap", "vendita", "donazione", "riciclo"]
 
 
@@ -28,12 +29,9 @@ class DiagnoseResponse(BaseModel):
     wear_count: int
     days_owned: int | None
     rationale: str
-    # Backend usato: "vlm-lora" | "clip-mlp" | "heuristic".
+    # Backend usato: "clip-mlp" | "heuristic".
     source: str = "heuristic"
     confidence: float | None = None
-    # Difetto e tutorial sono popolati solo dal backend VLM (Approccio C).
-    defect: str | None = None
-    tutorial: str | None = None
     suggestions: list[ActionSuggestion]
 
 
@@ -62,19 +60,3 @@ class ImpactStats(BaseModel):
     co2_by_type: dict[str, float]
     retired_items_count: int
     repaired_items_count: int
-
-
-class RepairTutorialOut(BaseModel):
-    defect: str
-    category: str | None
-    title: str
-    difficulty: str
-    time_minutes: int
-    materials: list[str]
-    steps: list[str]
-    source: str
-    llm_enrichment_available: bool
-
-
-class SupportedDefects(BaseModel):
-    defects: list[str]

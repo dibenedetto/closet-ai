@@ -47,12 +47,6 @@ def llm_mock(monkeypatch):
         last_user = next(
             (m["content"] for m in reversed(messages) if m["role"] == "user"), ""
         )
-        if "Schema atteso" in (next((m["content"] for m in messages if m["role"] == "system"), "") or ""):
-            return FakeResponse(
-                '{"title": "Riparazione test", "difficulty": "media",'
-                ' "time_minutes": 25, "materials": ["ago", "filo"],'
-                ' "steps": ["passo 1", "passo 2"]}'
-            )
         if "descrizione" in last_user.lower():
             return FakeResponse("Capo versatile per outfit casual quotidiani.")
         return FakeResponse("Ottimo lavoro! Hai evitato CO₂ e indossato di più i tuoi capi.")
@@ -148,30 +142,6 @@ def test_coach_empty_wardrobe_short_circuits(client, monkeypatch) -> None:
     assert r.status_code == 200
     body = r.json()
     assert "vuoto" in body["text"].lower()
-
-
-# ----- repair tutorials enrich ---------------------------------------------
-
-
-def test_enriched_tutorial_uses_llm_when_available(client, llm_mock) -> None:
-    body = client.get(
-        "/api/v1/repair-tutorials/enrich",
-        params={"defect": "strappo", "category": "jeans"},
-    ).json()
-    assert body["source"] == "llm"
-    assert body["title"] == "Riparazione test"
-    assert "ago" in body["materials"]
-
-
-def test_enriched_tutorial_falls_back_to_kb_without_llm(client, monkeypatch) -> None:
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    body = client.get(
-        "/api/v1/repair-tutorials/enrich", params={"defect": "strappo"}
-    ).json()
-    # Senza LLM → ricade sulla KB hardcoded
-    assert body["source"] == "hardcoded"
-    assert body["steps"]
 
 
 # ----- try-on --------------------------------------------------------------

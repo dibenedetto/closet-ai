@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { Condition, Item } from '../api/items'
-import { getEnrichedTutorial } from '../api/ai'
 import {
   deleteAction,
   diagnoseItem,
-  getRepairTutorial,
   listActions,
-  listSupportedDefects,
   registerAction,
   setItemCondition,
   type ActionType,
   type DiagnoseResponse,
   type ItemAction,
-  type RepairTutorial,
 } from '../api/circular'
 
-const CONDITIONS: Condition[] = ['nuovo', 'buono', 'usurato', 'danneggiato']
+const CONDITIONS: Condition[] = ['buono', 'usurato', 'danneggiato']
 
 function fmtDate(iso: string): string {
   try {
@@ -24,63 +20,6 @@ function fmtDate(iso: string): string {
   } catch {
     return iso
   }
-}
-
-function TutorialModal({
-  tutorial,
-  onEnrich,
-  enriching,
-  onClose,
-}: {
-  tutorial: RepairTutorial
-  onEnrich: () => void
-  enriching: boolean
-  onClose: () => void
-}) {
-  const isLlm = tutorial.source === 'llm'
-  return (
-    <div className="tutorial-modal-backdrop" onClick={onClose}>
-      <div className="tutorial-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>
-          {tutorial.title}
-          {isLlm && <span className="ai-label" style={{ marginLeft: 8 }}>✨ AI</span>}
-        </h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Difficoltà: <b>{tutorial.difficulty}</b> ·
-          tempo stimato: <b>{tutorial.time_minutes} min</b>
-        </p>
-
-        <h4>Materiali</h4>
-        <ul>
-          {tutorial.materials.map((m, i) => (
-            <li key={i}>{m}</li>
-          ))}
-        </ul>
-
-        <h4>Procedura</h4>
-        <ol>
-          {tutorial.steps.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ol>
-
-        <p className="muted" style={{ fontSize: 11 }}>
-          Sorgente: {tutorial.source}
-        </p>
-
-        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          {tutorial.llm_enrichment_available && !isLlm && (
-            <button onClick={onEnrich} disabled={enriching}>
-              {enriching ? 'Arricchisco con AI…' : '✨ Arricchisci con AI'}
-            </button>
-          )}
-          <button className="ghost" onClick={onClose} style={{ marginLeft: 'auto' }}>
-            Chiudi
-          </button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function CircularSection({
@@ -92,10 +31,6 @@ export default function CircularSection({
 }) {
   const [diagnosis, setDiagnosis] = useState<DiagnoseResponse | null>(null)
   const [actions, setActions] = useState<ItemAction[]>([])
-  const [defects, setDefects] = useState<string[]>([])
-  const [selectedDefect, setSelectedDefect] = useState<string>('')
-  const [tutorial, setTutorial] = useState<RepairTutorial | null>(null)
-  const [enriching, setEnriching] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,21 +38,15 @@ export default function CircularSection({
     setBusy(true)
     setError(null)
     try {
-      const [d, a, def] = await Promise.all([
-        diagnoseItem(item.id),
-        listActions(item.id),
-        listSupportedDefects(),
-      ])
+      const [d, a] = await Promise.all([diagnoseItem(item.id), listActions(item.id)])
       setDiagnosis(d)
       setActions(a)
-      setDefects(def)
-      if (!selectedDefect && def.length) setSelectedDefect(def[0])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
-  }, [item.id, selectedDefect])
+  }, [item.id])
 
   useEffect(() => {
     void refresh()
@@ -175,35 +104,6 @@ export default function CircularSection({
     }
   }
 
-  async function onOpenTutorial() {
-    if (!selectedDefect) return
-    setBusy(true)
-    try {
-      setTutorial(await getRepairTutorial(selectedDefect, item.category ?? undefined))
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function onEnrichTutorial() {
-    if (!tutorial || enriching) return
-    setEnriching(true)
-    try {
-      const enriched = await getEnrichedTutorial(tutorial.defect, {
-        category: item.category ?? undefined,
-        color: item.color ?? undefined,
-        condition: item.condition ?? undefined,
-      })
-      setTutorial(enriched)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setEnriching(false)
-    }
-  }
-
   return (
     <div className="circular-card">
       <h3>Azioni circolari</h3>
@@ -237,18 +137,6 @@ export default function CircularSection({
           </span>
         )}
       </div>
-
-      {diagnosis?.tutorial && (
-        <div className="ai-card" style={{ marginBottom: 12 }}>
-          <span className="ai-label">✨ AI · diagnosi dalla foto</span>
-          {diagnosis.defect && (
-            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              Difetto rilevato: {diagnosis.defect}
-            </p>
-          )}
-          <p className="ai-text">{diagnosis.tutorial}</p>
-        </div>
-      )}
 
       {item.retired_at && (
         <p className="muted" style={{ fontSize: 12 }}>
@@ -315,38 +203,6 @@ export default function CircularSection({
             </li>
           ))}
         </ul>
-      )}
-
-      <h3 style={{ marginTop: 16 }}>Tutorial di riparazione</h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <select
-          value={selectedDefect}
-          onChange={(e) => setSelectedDefect(e.target.value)}
-          disabled={busy || defects.length === 0}
-          style={{
-            background: 'var(--panel-2)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '6px 10px',
-          }}
-        >
-          {defects.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
-        <button className="ghost" onClick={() => void onOpenTutorial()} disabled={busy}>
-          Mostra tutorial
-        </button>
-      </div>
-
-      {tutorial && (
-        <TutorialModal
-          tutorial={tutorial}
-          onEnrich={() => void onEnrichTutorial()}
-          enriching={enriching}
-          onClose={() => setTutorial(null)}
-        />
       )}
     </div>
   )

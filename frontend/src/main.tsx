@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage'
 import TodayPage from './pages/TodayPage'
 import MirrorPage from './pages/MirrorPage'
 import MlLabPage from './pages/MlLabPage'
+import '@fontsource-variable/inter/wght.css'
 import './index.css'
 
 const router = createBrowserRouter([

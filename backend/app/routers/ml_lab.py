@@ -1,8 +1,8 @@
 """Endpoint per la pagina tecnica ML Lab.
 
 Espone lo stato di **training / test / eval** delle reti addestrate da noi
-(rete stato del capo, rete gap analysis, adapter VLM) e due endpoint di
-prova interattiva usati dal frontend:
+(rete stato del capo, rete gap analysis) e due endpoint di prova
+interattiva usati dal frontend:
 
 - ``POST /ml/condition/predict`` — foto → stato predetto (senza creare item)
 - ``POST /ml/gap/predict``       — conteggi simulati → vuoti predetti
@@ -76,7 +76,6 @@ def _count_csv_rows(path: Path) -> int | None:
 def get_models_status() -> MlLabStatus:
     """Stato + metriche delle reti addestrate da noi e dei loro dataset."""
     from app.ml.condition_model import WEIGHTS_PATH as COND_W
-    from app.ml.condition_vlm import ADAPTER_DIR
     from app.ml.gap_model import WEIGHTS_PATH as GAP_W
 
     cond_meta = _load_ckpt_meta(COND_W) or {}
@@ -94,10 +93,10 @@ def get_models_status() -> MlLabStatus:
             key="condition-mlp",
             name="Rete stato del capo (Approccio A)",
             nature="own",
-            task="Dalla foto: nuovo / buono / usurato / danneggiato",
+            task="Dalla foto: buono / usurato / danneggiato",
             available=COND_W.is_file(),
             weights_path=_rel(COND_W),
-            architecture="Fashion-CLIP (frozen) → MLP 512→256→128→4",
+            architecture="Fashion-CLIP (frozen) → MLP 512→256→128→3",
             metrics=cond_metrics,
             labels=list(cond_meta.get("labels", [])) or None,
             train_command="uv run python scripts/train_condition_model.py",
@@ -114,18 +113,6 @@ def get_models_status() -> MlLabStatus:
             labels=list(gap_meta.get("labels", [])) or None,
             train_command="uv run python scripts/train_gap_model.py",
         ),
-        ModelInfo(
-            key="condition-vlm-lora",
-            name="VLM + LoRA stato+tutorial (Approccio C)",
-            nature="gen",
-            task="Dalla foto: stato + tutorial di recupero in JSON",
-            available=(ADAPTER_DIR / "adapter_config.json").is_file(),
-            weights_path=_rel(ADAPTER_DIR),
-            architecture="Qwen2-VL-2B + LoRA r16 (q/k/v/o_proj)",
-            metrics=None,
-            labels=None,
-            train_command="uv run python scripts/train_condition_vlm_pipeline.py",
-        ),
     ]
 
     datasets = [
@@ -134,7 +121,7 @@ def get_models_status() -> MlLabStatus:
             name="Garment Condition (immagini degradate)",
             available=CONDITION_MANIFEST.is_file(),
             n_samples=_count_csv_rows(CONDITION_MANIFEST),
-            detail="4 stati bilanciati · degradazione sintetica su forme reali (FashionMNIST)",
+            detail="3 stati bilanciati · foto reali con difetti annotati (COCO) + degradazione sintetica",
             build_command="uv run python scripts/build_condition_dataset.py --per-class 150",
         ),
         DatasetInfo(

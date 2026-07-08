@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 class ModelInfo(BaseModel):
     """Stato di un modello addestrato da noi."""
 
-    key: str                      # "condition-mlp" | "gap-mlp" | "condition-vlm-lora"
+    key: str                      # "condition-mlp" | "gap-mlp"
     name: str
-    nature: str                   # "own" | "gen" — per il codice colore in UI
+    nature: str                   # "own" — per il codice colore in UI
     task: str                     # descrizione breve del compito
     available: bool               # pesi/adapter presenti su disco
     weights_path: str

@@ -48,13 +48,13 @@
 > | 1 · «L'ho comprato» | lo fotografo → riconoscimento | §1–2 (guardaroba + aggiungi capo) |
 > | 2 · «L'ho indossato» | tracking uso | §3 (wear log + cost-per-wear) |
 > | 3 · «Cosa metto oggi?» | recommender | §4 (`/today`) |
-> | 4 · «Si è rovinato» | stato + tutorial | §6 (modulo circolare) |
+> | 4 · «Si è rovinato» | diagnosi stato | §6 (modulo circolare) |
 > | 5 · «Mi serve altro?» | gap analysis | §5 (dashboard → card "Analisi guardaroba") |
 > | 6 · «Lo lascio andare» | azione circolare + CO₂ | §6 (esegui azione) → §5 (impatto) |
 >
 > Ricorda il **codice colore delle 4 nature** (slide legenda + pipeline):
 > 🟦 pre-addestrata (Fashion-CLIP) · 🟩 nostra (stato, gap) · 🟪 generativa
-> (tutorial, descrizioni, try-on) · 🟨 regole (cost-per-wear, CO₂).
+> (descrizioni, try-on) · 🟨 regole (cost-per-wear, CO₂).
 
 ### 0. Apertura (30s)
 
@@ -122,9 +122,7 @@
 - Mostra la sezione "Azioni circolari": dropdown condition + suggerimenti
   in ordine di priorità ("riparazione" prima per un capo usurato), con
   **stima CO₂ evitata** per ciascuno.
-- Clicca **"Mostra tutorial"** → dropdown difetti → seleziona "cucitura".
-  Si apre un modale con materiali e passi numerati.
-- (Opzionale) Esegui un'azione: appare nello storico e aggiorna le stats.
+- Esegui un'azione: appare nello storico e aggiorna le stats.
 
 ### 7. (Opzionale) Specchio smart (1 minuto) — `/mirror`
 
@@ -140,8 +138,8 @@
   - **Machine learning applicato**: Fashion-CLIP (classificazione +
     embedding), regole color+meteo per il recommender, euristica
     diagnosi.
-  - **AI generativa**: tutorial di riparazione (KB hardcoded + hook per
-    Claude API), supporto AI in fase di design UI.
+  - **AI generativa**: descrizioni capi, coach sostenibilità, try-on
+    virtuale, supporto AI in fase di design UI.
 - Sostenibilità "misurabile" — ogni feature popola una metrica concreta.
 - Modularità: 6 moduli funzionali (M1-M6) assegnabili a sottogruppi del
   corso.
