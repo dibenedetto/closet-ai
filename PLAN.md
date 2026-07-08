@@ -169,12 +169,12 @@ Hardware target: GPU locale.
 - [x] 6 degradazioni (fading, pilling, wrinkles, stain, tear, hole) mappate ai 4 stati
 - [x] Output: `images/{stato}/`, `manifest.csv` (split 70/15/15 stratificato), `vlm_dataset.jsonl` (instruction-tuning con stato+tutorial dalla KB), `preview.png`
 - [x] Datasheet `docs/dataset-datasheet.md` (schema Gebru et al., bias e limiti documentati)
-- [ ] Raccolta di **foto di usura reale** per ridurre il domain gap residuo (azione utente)
+- [x] **Foto di usura reale**: integrato dataset COCO "Defect-Clothes" (Roboflow, CC BY 4.0, ~1480 foto) — builder in modalità ibrida: `danneggiato` da difetti veri annotati (cut/hole/stain), nuovo/buono da foto pulite reali, usurato con sintesi. `--no-coco` per disattivare.
 
 ### 7.2 Modello
 - [x] **A** — testa MLP su embedding Fashion-CLIP (CPU-friendly) — `app/ml/condition_model.py`
 - [x] Training script `scripts/train_condition_model.py` (estrazione embedding con cache + MLP PyTorch + early stopping)
-- [x] Valutazione: **test accuracy ~0.96** (basi reali FashionMNIST) / ~0.94 (sintetico), confusion matrix salvata
+- [x] Valutazione: sul **COCO reale** acc globale ~0.60 ma **F1 0.95 su `danneggiato`** (difetti veri) e recall 1.0 su `usurato`; la confusione è tutta in nuovo↔buono (confine artificiale del labeling sintetico — documentato in datasheet). Su dataset sintetici: ~0.94-0.96 (sovrastima).
 - [x] Integrazione `services/condition.py`: usa il modello se i pesi esistono + foto leggibile, altrimenti euristica; espone `source` + `confidence`
 - [x] 5 test (MLP, fallback graceful, predizione con fake, file mancante)
 - [ ] **B** — fine-tuning CNN (ResNet/EfficientNet) con torchvision *(opzionale)*

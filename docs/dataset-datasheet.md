@@ -69,26 +69,26 @@ stato e applichiamo **degradazioni controllate** che simulano l'usura.
 È una tecnica standard quando i dati etichettati scarseggiano (data
 augmentation per *damage simulation*).
 
-**Sorgenti delle immagini base** (in ordine di preferenza):
+**Sorgenti delle immagini** (in ordine di preferenza, auto-rilevate):
 
-1. `ml/datasets/source/` — immagini di capi puliti. Si possono popolare in
-   due modi:
-   - **FashionMNIST** (consigliato, automatico): lo script
-     [`fetch_real_garments.py`](../backend/scripts/fetch_real_garments.py)
-     scarica FashionMNIST (70k foto reali di capi, 10 categorie), estrae le
-     silhouette, le ricolora preservando ombre/pieghe reali e le salva qui.
-     Forme **reali e varie**, non disegnate a mano.
-   - **Foto proprie**: l'utente mette le sue foto di capi (jpg/png/webp).
-     La modalità ideale per il training finale.
-2. Bootstrap sintetico — se la cartella è vuota, lo script disegna sagome
-   stilizzate di capi con PIL. Serve solo a validare la pipeline; **non** è
-   adatto al training finale (sono icone, non foto).
+1. **Dataset COCO di difetti reali** (consigliato) —
+   `ml/datasets/Defect-Clothes.v3i.coco/` (Roboflow "Defect-Clothes",
+   CC BY 4.0, ~1480 foto). Modalità **ibrida**:
+   - `danneggiato` ← foto con **difetti veri annotati** (cut→strappo,
+     hole→buco, stain→macchia): niente sintesi, etichetta dal COCO;
+   - `nuovo` / `buono` ← foto reali pulite (buono con lievi pieghe sintetiche);
+   - `usurato` ← foto pulite + fading/pilling sintetici (il COCO non ha la
+     classe "consumato").
+   Disattivabile con `--no-coco`.
+2. `ml/datasets/source/` — capi puliti da degradare (foto proprie oppure
+   output di [`fetch_real_garments.py`](../backend/scripts/fetch_real_garments.py),
+   che ricolora silhouette FashionMNIST).
+3. Bootstrap sintetico — sagome PIL, solo per validare la pipeline.
 
-**Workflow consigliato**:
+**Workflow consigliato** (con il COCO scaricato):
 
 ```bash
 cd backend
-uv run python scripts/fetch_real_garments.py --count 240   # popola source/
 uv run python scripts/build_condition_dataset.py --per-class 150
 uv run python scripts/train_condition_model.py --no-cache
 ```
@@ -141,11 +141,22 @@ ri-generare il dataset a partire da **foto reali** (vedi limiti sotto).
 - **Bootstrap = icone**: in assenza totale di immagini sorgente, le basi
   sono sagome stilizzate, ancora più lontane da foto reali.
 
-> Baseline misurate (Approccio A, MLP su embedding Fashion-CLIP):
-> ~0.94 test accuracy con basi sintetiche disegnate, ~0.96 con basi reali
-> FashionMNIST. Entrambe **sovrastimano** la performance su foto di usura
-> reale, perché le degradazioni di test sono dello stesso tipo di quelle di
-> training.
+> **Baseline misurate** (Approccio A, MLP su embedding Fashion-CLIP):
+>
+> | Sorgente dataset                    | Test acc | Note                                |
+> | ----------------------------------- | -------- | ----------------------------------- |
+> | Sagome disegnate (bootstrap)        | ~0.94    | sovrastima: degradazioni "facili"   |
+> | Silhouette FashionMNIST ricolorate  | ~0.96    | idem                                |
+> | **COCO difetti reali (ibrido)**     | **~0.60 globale, ma F1 0.95 su `danneggiato`** | il numero onesto |
+>
+> Il passaggio alle foto reali **rende visibile il domain gap** previsto:
+> l'accuracy globale crolla da 0.96 a 0.60, ma la classe che conta di più
+> (`danneggiato`, con difetti **veri**) è riconosciuta al 95%, e `usurato`
+> al 100% di recall. La confusione è concentrata in `nuovo ↔ buono`: due
+> classi di foto pulite reali distinte solo da pieghe sintetiche leggere —
+> un confine **artificiale del nostro labeling**, non un limite del modello.
+> Lezione: per separare nuovo/buono servono etichette umane reali (o la
+> fusione delle due classi).
 - **Bias di categoria/colore**: distribuzione uniforme artificiale, non
   rappresentativa di un guardaroba reale.
 - **Difetti semplificati**: un solo difetto dominante per immagine

@@ -6,16 +6,18 @@ d'usura (nuovo / buono / usurato / danneggiato). Lo costruiamo con
 buono stato e applichiamo trasformazioni che simulano l'usura, ottenendo
 coppie (immagine, stato) etichettate in automatico.
 
-Sorgenti delle immagini base, in ordine di preferenza:
+Sorgenti delle immagini, in ordine di preferenza:
 
-1. ``ml/datasets/source/`` — se contiene immagini (jpg/png/webp), le usa
-   come capi "puliti" da degradare. **Metti qui le tue foto reali** o un
-   dataset scaricato (es. Fashion Product Images da Kaggle).
-2. Bootstrap sintetico — se la cartella è vuota, genera sagome stilizzate
-   di capi (t-shirt, pantaloni, vestito, …) con PIL. Utile per far girare
-   la pipeline end-to-end senza scaricare nulla, ma le immagini sono
-   "icone", non foto: vanno bene per validare il codice, non per il
-   training finale.
+1. ``ml/datasets/Defect-Clothes.v3i.coco/`` — dataset COCO (Roboflow,
+   CC BY 4.0) con **difetti reali annotati**: cut→strappo, hole→buco,
+   stain→macchia. Modalità **ibrida**: i `danneggiato` sono foto reali di
+   danni veri; nuovo/buono/usurato derivano dalle foto pulite dello stesso
+   dataset (usurato con degradazione sintetica, il COCO non ha la classe
+   "consumato"). Disattivabile con ``--no-coco``.
+2. ``ml/datasets/source/`` — se contiene immagini (jpg/png/webp), le usa
+   come capi "puliti" da degradare (es. output di `fetch_real_garments.py`).
+3. Bootstrap sintetico — sagome stilizzate PIL. Solo per validare la
+   pipeline, non per il training finale.
 
 Output in ``ml/datasets/garment_condition/``:
 
@@ -50,12 +52,18 @@ from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.ml.color import NAMED_COLORS  # noqa: E402
+from app.ml.color import NAMED_COLORS, dominant_color_name  # noqa: E402
 from app.services import repair_tutorials  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SOURCE_DIR = ROOT / "ml" / "datasets" / "source"
 OUT_DIR = ROOT / "ml" / "datasets" / "garment_condition"
+COCO_DIR_DEFAULT = ROOT / "ml" / "datasets" / "Defect-Clothes.v3i.coco"
+
+# Categorie COCO (Roboflow Defect-Clothes) → nostri difetti; priorità di
+# assegnazione quando un'immagine ha più difetti.
+COCO_DEFECT_MAP = {"cut": "strappo", "hole": "buco", "stain": "macchia"}
+COCO_DEFECT_PRIORITY = ("cut", "hole", "stain")
 
 IMG_SIZE = 256
 BG_COLOR = (244, 244, 246)
@@ -135,6 +143,50 @@ def _draw_garment(category: str, rgb: tuple[int, int, int]) -> Image.Image:
                             fill=fill, outline=outline)
 
     return img.filter(ImageFilter.SMOOTH)
+
+
+def _load_coco_index(coco_dir: Path) -> dict | None:
+    """Indicizza il dataset COCO: foto pulite vs foto con difetto reale.
+
+    Ritorna ``{"clean": [Path], "defect": [(Path, difetto)]}`` oppure None
+    se la cartella non esiste o non contiene annotazioni valide."""
+    if not coco_dir.is_dir():
+        return None
+    clean: list[Path] = []
+    defect: list[tuple[Path, str]] = []
+    for split in ("train", "valid", "test"):
+        ann_path = coco_dir / split / "_annotations.coco.json"
+        if not ann_path.is_file():
+            continue
+        try:
+            data = json.loads(ann_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        cats = {c["id"]: c["name"] for c in data.get("categories", [])}
+        names_by_img: dict[int, set[str]] = {}
+        for a in data.get("annotations", []):
+            names_by_img.setdefault(a["image_id"], set()).add(cats.get(a["category_id"], ""))
+        for img in data.get("images", []):
+            path = coco_dir / split / img["file_name"]
+            if not path.is_file():
+                continue
+            names = names_by_img.get(img["id"], set())
+            found = None
+            for coco_name in COCO_DEFECT_PRIORITY:
+                if coco_name in names:
+                    found = COCO_DEFECT_MAP[coco_name]
+                    break
+            if found:
+                defect.append((path, found))
+            else:
+                clean.append(path)
+    if not clean and not defect:
+        return None
+    return {"clean": clean, "defect": defect}
+
+
+def _load_real_image(path: Path) -> Image.Image:
+    return Image.open(path).convert("RGB").resize((IMG_SIZE, IMG_SIZE), Image.LANCZOS)
 
 
 def _load_source_images() -> list[Image.Image]:
@@ -382,13 +434,25 @@ def _assign_split(rng: random.Random) -> str:
     return "test"
 
 
-def build(per_class: int, seed: int) -> None:
+def build(per_class: int, seed: int, *, use_coco: bool = True,
+          coco_dir: Path | None = None) -> None:
     rng = random.Random(seed)
 
-    source_images = _load_source_images()
+    coco = _load_coco_index(coco_dir or COCO_DIR_DEFAULT) if use_coco else None
+    source_images = [] if coco else _load_source_images()
     use_source = len(source_images) > 0
-    print(f"==> Sorgente immagini base: "
-          f"{'cartella source/ (' + str(len(source_images)) + ' immagini reali)' if use_source else 'bootstrap sintetico'}")
+
+    if coco:
+        rng.shuffle(coco["clean"])
+        rng.shuffle(coco["defect"])
+        print(f"==> Sorgente: dataset COCO reale "
+              f"({len(coco['clean'])} pulite, {len(coco['defect'])} con difetto vero)")
+        if per_class > len(coco["defect"]):
+            print(f"    ⚠️ per-class {per_class} > {len(coco['defect'])} difetti reali: "
+                  "alcune immagini danneggiate saranno riusate")
+    else:
+        print(f"==> Sorgente immagini base: "
+              f"{'cartella source/ (' + str(len(source_images)) + ' immagini reali)' if use_source else 'bootstrap sintetico'}")
 
     # Reset cartelle output
     images_root = OUT_DIR / "images"
@@ -399,24 +463,43 @@ def build(per_class: int, seed: int) -> None:
 
     samples: list[Sample] = []
     idx = 0
+    clean_i = 0
+    defect_i = 0
     for cond in CONDITIONS:
         for _ in range(per_class):
-            # 1. immagine base
-            if use_source:
+            # 1+2. immagine base + degradazione (dipende dalla sorgente)
+            category = "sconosciuto"
+            color: str | None = None  # None → calcolato dopo il salvataggio
+            if coco:
+                if cond == "danneggiato":
+                    # Difetto REALE: nessuna sintesi, etichetta dal COCO.
+                    path, defect_label = coco["defect"][defect_i % len(coco["defect"])]
+                    defect_i += 1
+                    img = _load_real_image(path)
+                    defect, severity = defect_label, 1.0
+                else:
+                    # Foto pulita reale; usurato ottenuto con degradazione sintetica.
+                    path = coco["clean"][clean_i % len(coco["clean"])]
+                    clean_i += 1
+                    img, defect, severity = make_condition(_load_real_image(path), cond, rng)
+            elif use_source:
                 base = source_images[rng.randrange(len(source_images))].copy()
-                category = "sconosciuto"
-                color = "sconosciuto"
+                img, defect, severity = make_condition(base, cond, rng)
             else:
                 category = rng.choice(SHAPE_CATEGORIES)
                 color = rng.choice(list(NAMED_COLORS.keys()))
                 base = _draw_garment(category, NAMED_COLORS[color])
+                img, defect, severity = make_condition(base, cond, rng)
 
-            # 2. degradazione
-            img, defect, severity = make_condition(base, cond, rng)
-
-            # 3. salva
+            # 3. salva (+ colore dominante per le foto reali)
             filename = f"{cond}_{idx:04d}.png"
-            img.save(images_root / cond / filename)
+            out_path = images_root / cond / filename
+            img.save(out_path)
+            if color is None:
+                try:
+                    color = dominant_color_name(out_path)
+                except Exception:
+                    color = "sconosciuto"
             samples.append(Sample(
                 filename=f"images/{cond}/{filename}",
                 category=category,
@@ -456,7 +539,11 @@ def build(per_class: int, seed: int) -> None:
     print(f"    Per split:  {dict(by_split)}")
     print(f"    manifest:   {manifest_path.relative_to(ROOT)}")
     print(f"    VLM jsonl:  {vlm_path.relative_to(ROOT)}")
-    if not use_source:
+    if coco:
+        n_real = sum(1 for s in samples if s.condition == "danneggiato")
+        print(f"    NB: i {n_real} 'danneggiato' sono foto con DIFETTI REALI (COCO);")
+        print("        nuovo/buono da foto reali pulite; usurato = pulite + sintesi.")
+    elif not use_source:
         print("    NB: immagini sintetiche (bootstrap). Per il training reale,")
         print(f"        metti foto vere in {SOURCE_DIR.relative_to(ROOT)} e rilancia.")
 
@@ -482,10 +569,19 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--source-dir", type=str, default=None,
                         help="cartella con immagini base reali (override)")
+    parser.add_argument("--coco-dir", type=str, default=None,
+                        help=f"cartella dataset COCO difetti (default: {COCO_DIR_DEFAULT.name})")
+    parser.add_argument("--no-coco", action="store_true",
+                        help="ignora il dataset COCO anche se presente")
     args = parser.parse_args()
 
     if args.source_dir:
         SOURCE_DIR = Path(args.source_dir).resolve()  # noqa: F811
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    build(per_class=args.per_class, seed=args.seed)
+    build(
+        per_class=args.per_class,
+        seed=args.seed,
+        use_coco=not args.no_coco,
+        coco_dir=Path(args.coco_dir).resolve() if args.coco_dir else None,
+    )
