@@ -1,5 +1,5 @@
 import type { Condition } from './items'
-import { API_BASE, jsonOrThrow } from './client'
+import { API_BASE, asError, jsonOrThrow } from './client'
 
 export type ActionType = 'riparazione' | 'swap' | 'vendita' | 'donazione' | 'riciclo'
 
@@ -78,7 +78,7 @@ export async function listActions(itemId: number): Promise<ItemAction[]> {
 
 export async function deleteAction(actionId: number): Promise<void> {
   const r = await fetch(`${API_BASE}/actions/${actionId}`, { method: 'DELETE' })
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  if (!r.ok) throw await asError(r)
 }
 
 export async function getImpactStats(): Promise<ImpactStats> {

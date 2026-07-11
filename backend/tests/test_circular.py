@@ -122,6 +122,22 @@ def test_register_retiring_action_marks_item_retired(client, png) -> None:
     assert detail["retired_at"] is not None
 
 
+def test_retired_item_rejects_duplicate_retiring_action(client, png) -> None:
+    item = _create(client, png, category="cappotto")
+    first = client.post(
+        f"/api/v1/items/{item['id']}/actions",
+        json={"action_type": "donazione"},
+    )
+    assert first.status_code == 201
+
+    duplicate = client.post(
+        f"/api/v1/items/{item['id']}/actions",
+        json={"action_type": "vendita"},
+    )
+    assert duplicate.status_code == 409
+    assert "già in seconda vita" in duplicate.json()["detail"]
+
+
 def test_register_action_with_explicit_co2(client, png) -> None:
     item = _create(client, png, category="t-shirt")
     r = client.post(
@@ -178,8 +194,11 @@ def test_delete_action_404(client) -> None:
 
 
 def test_retired_items_excluded_from_wardrobe_stats(client, png) -> None:
-    a = _create(client, png, name="A", category="t-shirt")
-    b = _create(client, png, name="B", category="jeans")
+    a = _create(client, png, name="A", category="t-shirt", price=50)
+    b = _create(client, png, name="B", category="jeans", price=100)
+    client.post(f"/api/v1/items/{a['id']}/wear", json={})
+    client.post(f"/api/v1/items/{b['id']}/wear", json={})
+    client.post(f"/api/v1/items/{b['id']}/wear", json={})
     # Ritiro b via donazione
     client.post(
         f"/api/v1/items/{b['id']}/actions",
@@ -187,9 +206,12 @@ def test_retired_items_excluded_from_wardrobe_stats(client, png) -> None:
     )
 
     body = client.get("/api/v1/stats/wardrobe").json()
-    # solo a contato (b ritirato)
+    # Tutte le metriche descrivono il guardaroba attivo: solo A.
     assert body["total_items"] == 1
-    _ = a
+    assert body["total_wears"] == 1
+    assert body["total_investment"] == 50.0
+    assert body["avg_cost_per_wear"] == 50.0
+    assert [item["item_id"] for item in body["top_worn"]] == [a["id"]]
 
 
 def test_retired_items_excluded_from_ghosts(client, png) -> None:

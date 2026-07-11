@@ -31,6 +31,16 @@ def _require_item(db: Session, item_id: int) -> Item:
     return item
 
 
+def _require_active_item(db: Session, item_id: int) -> Item:
+    item = _require_item(db, item_id)
+    if item.retired_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Item {item_id} ritirato: impossibile registrare utilizzi.",
+        )
+    return item
+
+
 @router.post(
     "/items/{item_id}/wear",
     response_model=WearEventRead,
@@ -42,7 +52,7 @@ def log_wear(
     db: Session = Depends(get_db),
 ) -> WearEvent:
     """Registra un utilizzo del capo. Se `worn_on` non è fornita, usa oggi."""
-    _require_item(db, item_id)
+    _require_active_item(db, item_id)
     payload = payload or WearEventCreate()
     event = WearEvent(
         item_id=item_id,
@@ -77,18 +87,26 @@ def batch_log_wears(
 ) -> list[WearEvent]:
     """Registra più eventi in una singola transazione.
 
-    Tutti gli `item_id` devono esistere: in caso contrario l'intera operazione
-    fallisce con 404. Le date mancanti diventano oggi.
+    Tutti gli `item_id` devono esistere ed essere attivi: in caso contrario
+    l'intera operazione fallisce con 404 o 409. Le date mancanti diventano oggi.
     """
     item_ids = sorted({e.item_id for e in payload.events})
-    existing = (
-        db.execute(select(Item.id).where(Item.id.in_(item_ids))).scalars().all()
-    )
-    missing = set(item_ids) - set(existing)
+    item_rows = db.execute(
+        select(Item.id, Item.retired_at).where(Item.id.in_(item_ids))
+    ).all()
+    existing_ids = {row.id for row in item_rows}
+    missing = set(item_ids) - existing_ids
     if missing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Item non trovati: {sorted(missing)}",
+        )
+
+    retired = sorted(row.id for row in item_rows if row.retired_at is not None)
+    if retired:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(f"Item ritirati: {retired}. Impossibile registrare utilizzi."),
         )
 
     today = _today()

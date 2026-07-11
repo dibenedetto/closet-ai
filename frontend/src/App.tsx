@@ -1,68 +1,127 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
+import Icon, { type IconName } from './components/Icon'
 import Logo from './components/Logo'
 
-const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '')
-
-const NAV_ITEMS = [
-  { to: '/', end: true, icon: '👕', label: 'Guardaroba' },
-  { to: '/today', end: false, icon: '✨', label: 'Cosa metto oggi?' },
-  { to: '/dashboard', end: false, icon: '🌱', label: 'Impatto' },
-  { to: '/lab', end: false, icon: '🧪', label: 'ML Lab' },
+const PRIMARY_NAV: Array<{ to: string; icon: IconName; label: string; helper: string }> = [
+  { to: '/', icon: 'grid', label: 'Guardaroba', helper: 'I tuoi capi' },
+  { to: '/today', icon: 'sparkles', label: 'Cosa metto?', helper: 'Outfit per oggi' },
+  { to: '/dashboard', icon: 'leaf', label: 'Impatto', helper: 'Stato, gap e CO₂' },
 ]
 
-export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const location = useLocation()
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Guardaroba',
+  '/items/new': 'Aggiungi un capo',
+  '/today': 'Cosa metto oggi?',
+  '/dashboard': 'Impatto',
+  '/lab': 'ML Lab',
+}
 
-  // Chiudi il menu mobile a ogni cambio pagina.
+function navClass({ isActive }: { isActive: boolean }) {
+  return isActive ? 'nav-link active' : 'nav-link'
+}
+
+export default function App() {
+  const location = useLocation()
+  const mainRef = useRef<HTMLElement | null>(null)
+
   useEffect(() => {
-    setMenuOpen(false)
+    const section = location.pathname.startsWith('/items/')
+      ? location.pathname === '/items/new' ? 'Aggiungi un capo' : location.pathname.endsWith('/edit') ? 'Modifica capo' : 'Dettaglio capo'
+      : PAGE_TITLES[location.pathname] ?? 'ClosetAI'
+    document.title = `${section} · ClosetAI`
+    mainRef.current?.focus()
   }, [location.pathname])
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-inner">
-          <Link to="/" className="brand" title="ClosetAI — home">
-            <Logo size={32} />
-            <span className="brand-name">
-              Closet<span className="brand-ai">AI</span>
-            </span>
-          </Link>
+      <a className="skip-link" href="#main-content">Vai al contenuto</a>
 
-          <nav className={`topbar-nav ${menuOpen ? 'open' : ''}`}>
-            {NAV_ITEMS.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
-                <span className="nav-icon" aria-hidden="true">{item.icon}</span>
-                {item.label}
-              </NavLink>
-            ))}
-            <Link to="/items/new" className="add-cta add-cta-mobile">
-              <span aria-hidden="true">📷</span> Aggiungi capo
-            </Link>
-          </nav>
+      <aside className="sidebar" aria-label="Navigazione principale">
+        <Link to="/" className="brand" aria-label="ClosetAI — guardaroba">
+          <Logo size={38} />
+          <span className="brand-copy">
+            <span className="brand-name">ClosetAI</span>
+            <span className="brand-tagline">Wear more. Waste less.</span>
+          </span>
+        </Link>
 
-          <div className="topbar-actions">
-            <Link to="/items/new" className="add-cta">
-              <span aria-hidden="true">📷</span> Aggiungi capo
-            </Link>
-            <button
-              type="button"
-              className="nav-toggle ghost"
-              aria-label={menuOpen ? 'Chiudi menu' : 'Apri menu'}
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
+        <nav className="sidebar-nav">
+          <span className="nav-section-label">Il tuo spazio</span>
+          {PRIMARY_NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) => navClass({ isActive: isActive || (item.to === '/' && location.pathname.startsWith('/items')) })}
             >
-              <span className={`burger ${menuOpen ? 'open' : ''}`} />
-            </button>
-          </div>
+              <span className="nav-icon"><Icon name={item.icon} size={20} /></span>
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.helper}</small>
+              </span>
+              <Icon name="chevron-right" size={16} className="nav-chevron" />
+            </NavLink>
+          ))}
+        </nav>
+
+        <Link to="/items/new" className="button button-primary sidebar-add">
+          <Icon name="plus" size={18} />
+          Aggiungi un capo
+        </Link>
+
+        <nav className="sidebar-nav sidebar-nav-secondary" aria-label="Strumenti">
+          <span className="nav-section-label">Prototipi</span>
+          <NavLink to="/lab" className={navClass}>
+            <span className="nav-icon"><Icon name="flask" size={19} /></span>
+            <span><strong>ML Lab</strong><small>Modelli e test</small></span>
+            <Icon name="chevron-right" size={16} className="nav-chevron" />
+          </NavLink>
+          <Link to="/mirror" className="nav-link">
+            <span className="nav-icon"><Icon name="wand" size={19} /></span>
+            <span><strong>Specchio</strong><small>Vista kiosk</small></span>
+            <Icon name="chevron-right" size={16} className="nav-chevron" />
+          </Link>
+        </nav>
+
+        <div className="sidebar-footnote">
+          <span className="sidebar-footnote-icon"><Icon name="leaf" size={17} /></span>
+          <p><strong>Il capo più sostenibile</strong><br />è quello che hai già.</p>
         </div>
+      </aside>
+
+      <header className="mobile-header">
+        <Link to="/" className="brand" aria-label="ClosetAI — guardaroba">
+          <Logo size={34} />
+          <span className="brand-name">ClosetAI</span>
+        </Link>
+        <Link to="/items/new" className="icon-button" aria-label="Aggiungi un capo">
+          <Icon name="plus" size={20} />
+        </Link>
       </header>
-      <main className="app">
+
+      <main id="main-content" className="app" ref={mainRef} tabIndex={-1}>
         <Outlet />
       </main>
+
+      <nav className="mobile-nav" aria-label="Navigazione mobile">
+        {PRIMARY_NAV.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) => isActive || (item.to === '/' && location.pathname.startsWith('/items')) ? 'active' : ''}
+          >
+            <Icon name={item.icon} size={21} />
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+        <NavLink to="/lab">
+          <Icon name="flask" size={21} />
+          <span>Lab</span>
+        </NavLink>
+      </nav>
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { getCoachMessage, type CoachOut } from '../api/ai'
+import { errorMessage } from '../api/client'
+import Icon from './Icon'
 
 export default function CoachCard({
   llmConfigured,
@@ -20,7 +22,7 @@ export default function CoachCard({
     try {
       setData(await getCoachMessage(ghostAfterDays))
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
       setLoaded(true)
@@ -42,7 +44,14 @@ export default function CoachCard({
       </div>
     )
   }
-  if (error) return null
+  if (error) {
+    return (
+      <div className="notice notice-warning" style={{ marginBottom: 16 }} role="status">
+        <Icon name="circle-alert" size={17} /> Il coach AI non è disponibile.{' '}
+        <button type="button" className="text-button" onClick={() => void load()}>Riprova</button>
+      </div>
+    )
+  }
 
   return (
     <div className="ai-card" style={{ marginBottom: 16 }}>

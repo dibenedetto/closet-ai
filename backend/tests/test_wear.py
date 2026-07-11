@@ -42,6 +42,21 @@ def test_log_wear_404_when_item_missing(client) -> None:
     assert r.status_code == 404
 
 
+def test_log_wear_rejects_retired_item(client, png) -> None:
+    item = _create_item(client, png)
+    retired = client.post(
+        f"/api/v1/items/{item['id']}/actions",
+        json={"action_type": "donazione"},
+    )
+    assert retired.status_code == 201, retired.text
+
+    r = client.post(f"/api/v1/items/{item['id']}/wear", json={})
+
+    assert r.status_code == 409
+    assert "ritirato" in r.json()["detail"]
+    assert client.get(f"/api/v1/items/{item['id']}/wears").json() == []
+
+
 def test_list_wears_orders_by_worn_on_desc(client, png) -> None:
     item = _create_item(client, png)
     for d in ("2025-01-10", "2025-03-05", "2025-02-20"):
@@ -79,6 +94,27 @@ def test_batch_log_wears_rejects_missing_items(client, png) -> None:
     )
     assert r.status_code == 404
     assert "9999" in r.json()["detail"]
+
+
+def test_batch_log_wears_rejects_retired_items_atomically(client, png) -> None:
+    active = _create_item(client, png)
+    retired = _create_item(client, png)
+    action = client.post(
+        f"/api/v1/items/{retired['id']}/actions",
+        json={"action_type": "donazione"},
+    )
+    assert action.status_code == 201, action.text
+
+    r = client.post(
+        "/api/v1/wear-events/batch",
+        json={"events": [{"item_id": active["id"]}, {"item_id": retired["id"]}]},
+    )
+
+    assert r.status_code == 409
+    assert str(retired["id"]) in r.json()["detail"]
+    assert "ritirati" in r.json()["detail"]
+    assert client.get(f"/api/v1/items/{active['id']}/wears").json() == []
+    assert client.get(f"/api/v1/items/{retired['id']}/wears").json() == []
 
 
 def test_delete_wear_event(client, png) -> None:

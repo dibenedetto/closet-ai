@@ -8,6 +8,8 @@
  */
 import { useEffect, useState } from 'react'
 
+import PageHeader from '../components/PageHeader'
+
 import {
   confusionMatrixUrl,
   getMlLabStatus,
@@ -131,15 +133,14 @@ export default function MlLabPage() {
 
   return (
     <section>
-      <div className="toolbar">
-        <h2 style={{ margin: 0 }}>🧪 ML Lab</h2>
-        <span className="muted" style={{ fontSize: 12 }}>
-          training · test · eval delle reti addestrate da noi
-        </span>
-      </div>
+      <PageHeader
+        eyebrow="Area prototipo"
+        title="ML Lab"
+        description="Training, test ed evaluation delle reti addestrate per stato dei capi e gap analysis."
+      />
 
       {/* ── 1 · Stato dei modelli ─────────────────────────────────── */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
+      <div className="stats-grid lab-status-grid">
         {status.models.map((m) => {
           const nature = NATURE_STYLE[m.nature] ?? NATURE_STYLE.own
           return (
@@ -191,7 +192,7 @@ export default function MlLabPage() {
       {/* dataset */}
       <section className="panel" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>📚 Dataset</h3>
-        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        <div className="lab-dataset-grid">
           {status.datasets.map((d) => (
             <div
               key={d.key}
@@ -210,7 +211,7 @@ export default function MlLabPage() {
         </div>
       </section>
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div className="lab-demo-grid">
         {/* ── 2 · Prova la rete dello stato ────────────────────────── */}
         <section className="panel">
           <h3 style={{ marginTop: 0, fontSize: 15 }}>🛠️ Prova: stato dalla foto</h3>
@@ -223,7 +224,9 @@ export default function MlLabPage() {
               ⚠️ Rete non addestrata: l'endpoint risponderà 503.
             </p>
           )}
+          <label htmlFor="condition-photo">Foto del capo da analizzare</label>
           <input
+            id="condition-photo"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={(e) => {

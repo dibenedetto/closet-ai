@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.ml.classifier import CATEGORIES
 from app.ml.color import NAMED_COLORS
 
@@ -114,6 +116,91 @@ def test_get_detail_not_found(client) -> None:
     r = client.get("/api/v1/items/9999")
     assert r.status_code == 404
     assert "non trovato" in r.json()["detail"]
+
+
+def test_patch_updates_only_fields_present_in_payload(client, png) -> None:
+    created = client.post(
+        "/api/v1/items",
+        data={
+            "name": "Jeans originali",
+            "category": "jeans",
+            "color": "blu",
+            "price": "59.90",
+            "purchase_date": "2025-09-10",
+        },
+        files={"image": ("j.png", png(), "image/png")},
+    ).json()
+
+    r = client.patch(
+        f"/api/v1/items/{created['id']}",
+        json={"name": "  Jeans aggiornati  ", "color": "nero", "price": 42.5},
+    )
+
+    assert r.status_code == 200, r.text
+    updated = r.json()
+    assert updated["name"] == "Jeans aggiornati"
+    assert updated["color"] == "nero"
+    assert updated["price"] == 42.5
+    assert updated["category"] == "jeans"
+    assert updated["purchase_date"] == "2025-09-10"
+    assert updated["image_path"] == created["image_path"]
+
+
+def test_patch_can_clear_nullable_metadata(client, png) -> None:
+    created = client.post(
+        "/api/v1/items",
+        data={
+            "name": "Camicia",
+            "category": "camicia",
+            "color": "bianco",
+            "price": "30",
+            "purchase_date": "2024-05-20",
+        },
+        files={"image": ("c.png", png(), "image/png")},
+    ).json()
+
+    r = client.patch(
+        f"/api/v1/items/{created['id']}",
+        json={
+            "category": None,
+            "color": None,
+            "price": None,
+            "purchase_date": None,
+        },
+    )
+
+    assert r.status_code == 200, r.text
+    updated = r.json()
+    assert updated["name"] == "Camicia"
+    assert updated["category"] is None
+    assert updated["color"] is None
+    assert updated["price"] is None
+    assert updated["purchase_date"] is None
+
+
+@pytest.mark.parametrize("invalid_name", [None, "", "   "])
+def test_patch_rejects_null_or_blank_name(client, png, invalid_name) -> None:
+    created = client.post(
+        "/api/v1/items",
+        data={"name": "Nome valido"},
+        files={"image": ("n.png", png(), "image/png")},
+    ).json()
+
+    r = client.patch(
+        f"/api/v1/items/{created['id']}",
+        json={"name": invalid_name},
+    )
+
+    assert r.status_code == 422
+    assert client.get(f"/api/v1/items/{created['id']}").json()["name"] == "Nome valido"
+
+
+def test_patch_validates_metadata_and_missing_item(client) -> None:
+    assert client.patch("/api/v1/items/9999", json={"name": "Nuovo"}).status_code == 404
+    assert client.patch("/api/v1/items/9999", json={"price": -0.01}).status_code == 422
+    assert (
+        client.patch("/api/v1/items/9999", json={"unknown": "value"}).status_code == 422
+    )
 
 
 def test_list_after_create(client, png) -> None:

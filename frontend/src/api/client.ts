@@ -8,7 +8,7 @@ export class ApiError extends Error {
   detail: string
 
   constructor(status: number, detail: string) {
-    super(`HTTP ${status}: ${detail}`)
+    super(detail)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail
@@ -16,12 +16,15 @@ export class ApiError extends Error {
 }
 
 export async function asError(r: Response): Promise<ApiError> {
-  let detail: string
-  try {
-    const body = (await r.json()) as { detail?: unknown }
-    detail = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body)
-  } catch {
-    detail = await r.text().catch(() => r.statusText)
+  const raw = await r.text().catch(() => '')
+  let detail = raw || r.statusText || 'Richiesta non riuscita.'
+  if (raw) {
+    try {
+      const body = JSON.parse(raw) as { detail?: unknown }
+      detail = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body)
+    } catch {
+      // Le risposte non JSON sono già leggibili in `raw`.
+    }
   }
   return new ApiError(r.status, detail)
 }
@@ -29,4 +32,19 @@ export async function asError(r: Response): Promise<ApiError> {
 export async function jsonOrThrow<T>(r: Response): Promise<T> {
   if (!r.ok) throw await asError(r)
   return (await r.json()) as T
+}
+
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) return 'La risorsa richiesta non è più disponibile.'
+    if (error.status === 409) return error.detail
+    if (error.status === 413) return 'Il file supera il limite massimo di 10 MB.'
+    if (error.status === 422) return 'Controlla i dati inseriti e riprova.'
+    if (error.status >= 500) return 'Il servizio non è disponibile in questo momento. Riprova tra poco.'
+    return error.detail
+  }
+  if (error instanceof TypeError) {
+    return 'Non riesco a raggiungere ClosetAI. Verifica che il backend sia avviato.'
+  }
+  return error instanceof Error ? error.message : String(error)
 }

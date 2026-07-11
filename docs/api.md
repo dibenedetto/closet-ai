@@ -145,6 +145,25 @@ curl -s -X POST http://localhost:8000/api/v1/items \
 
 ---
 
+### `PATCH /items/{id}`
+
+Aggiorna parzialmente i metadati modificabili del capo. Il body è JSON e può
+contenere `name`, `category`, `color`, `price` e `purchase_date`; i campi
+omessi restano invariati. Un valore `null` rimuove un metadato facoltativo.
+
+**Risposta `200`** — oggetto `Item` aggiornato.
+
+**Risposta `404`** — item inesistente. **Risposta `422`** — nome vuoto/null,
+prezzo negativo, valore troppo lungo o campo sconosciuto.
+
+```bash
+curl -s -X PATCH http://localhost:8000/api/v1/items/12 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"T-shirt bordeaux preferita","price":null}'
+```
+
+---
+
 ### `DELETE /items/{id}`
 
 Elimina il record DB **e** il file immagine dal disco.
@@ -237,6 +256,7 @@ Registra un utilizzo del capo (un "wear event").
 
 **Risposta `201`** — `WearEvent` creato.
 **Risposta `404`** — item inesistente.
+**Risposta `409`** — il capo è già in seconda vita e non può ricevere nuovi utilizzi.
 
 ---
 

@@ -1,9 +1,4 @@
-/**
- * Logo temporaneo di ClosetAI (placeholder, sarà sostituito dal design finale).
- *
- * Il segno: una gruccia il cui gancio germoglia in una foglia — guardaroba +
- * sostenibilità. SVG inline, nessun asset esterno.
- */
+/** Gruccia + foglia: il guardaroba come risorsa da coltivare. */
 export default function Logo({ size = 34 }: { size?: number }) {
   return (
     <svg
@@ -11,13 +6,13 @@ export default function Logo({ size = 34 }: { size?: number }) {
       height={size}
       viewBox="0 0 48 48"
       fill="none"
-      role="img"
-      aria-label="Logo ClosetAI"
+      aria-hidden="true"
+      focusable="false"
     >
       <defs>
         <linearGradient id="closetai-bg" x1="0" y1="0" x2="48" y2="48">
-          <stop offset="0%" stopColor="#5b7df0" />
-          <stop offset="100%" stopColor="#3d5bc9" />
+          <stop offset="0%" stopColor="#2e6b52" />
+          <stop offset="100%" stopColor="#173d30" />
         </linearGradient>
       </defs>
       {/* tondo di sfondo */}
@@ -42,15 +37,15 @@ export default function Logo({ size = 34 }: { size?: number }) {
       {/* foglia che germoglia dal gancio */}
       <path
         d="M27 9.5 Q33 4.5 38 7 Q36.5 13 30.5 12.5 Q28 12 27 9.5 Z"
-        fill="#4ec9a0"
-        stroke="#3aa886"
+        fill="#b9d879"
+        stroke="#8db756"
         strokeWidth="1"
       />
       {/* nervatura della foglia */}
       <path
         d="M28.5 10.5 Q32.5 8.5 36 7.8"
         fill="none"
-        stroke="#2e7f66"
+        stroke="#527b35"
         strokeWidth="1"
         strokeLinecap="round"
       />

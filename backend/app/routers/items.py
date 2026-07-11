@@ -31,7 +31,7 @@ from app.config import (
 from app.db import get_db
 from app.ml.classifier import ClassificationResult, get_classifier
 from app.models import Item
-from app.schemas import ItemRead
+from app.schemas import ItemRead, ItemUpdate
 from app.services.embeddings import get_embedding_store
 
 router = APIRouter(prefix="/items", tags=["items"])
@@ -192,6 +192,26 @@ def list_items(
 @router.get("/{item_id}", response_model=ItemRead)
 def get_item(item_id: int, db: Session = Depends(get_db)) -> Item:
     return _get_item_or_404(db, item_id)
+
+
+@router.patch("/{item_id}", response_model=ItemRead)
+def update_item(
+    item_id: int,
+    payload: ItemUpdate,
+    db: Session = Depends(get_db),
+) -> Item:
+    """Aggiorna solo i campi presenti nel payload JSON.
+
+    I valori ``null`` espliciti cancellano i campi nullable; il nome non può
+    invece essere cancellato o ridotto a soli spazi.
+    """
+    item = _get_item_or_404(db, item_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

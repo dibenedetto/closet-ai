@@ -26,7 +26,7 @@ from datetime import date as date_type, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Item, WearEvent
+from app.models import Item, OutfitFeedback, WearEvent
 from app.services.color_compat import palette_compat_score
 from app.services.weather import WeatherInfo
 
@@ -124,6 +124,21 @@ def _wear_count_map(db: Session) -> dict[int, int]:
     return {int(r[0]): int(r[1]) for r in rows}
 
 
+def _feedback_affinity_map(db: Session) -> dict[int, float]:
+    """Media dei feedback outfit per capo, in [-1, 1].
+
+    È un segnale leggero: personalizza l'ordinamento senza sovrastare meteo e
+    compatibilità cromatica. I feedback restano validi anche se un capo viene
+    eliminato, quindi ignoriamo semplicemente gli id non presenti nel pool.
+    """
+    totals: dict[int, tuple[int, int]] = {}
+    for feedback in db.execute(select(OutfitFeedback)).scalars():
+        for item_id in feedback.item_ids:
+            total, count = totals.get(item_id, (0, 0))
+            totals[item_id] = (total + feedback.rating, count + 1)
+    return {item_id: total / count for item_id, (total, count) in totals.items() if count}
+
+
 def _ghost_bonus(items: list[Item], wear_counts: dict[int, int]) -> float:
     """Bonus se include capi mai/poco indossati (riequilibrio guardaroba)."""
     unused = [it for it in items if wear_counts.get(it.id, 0) == 0]
@@ -183,14 +198,25 @@ def _build_candidates(
 
 
 def _score(
-    items: list[Item], weather: WeatherInfo, wear_counts: dict[int, int]
+    items: list[Item], weather: WeatherInfo, wear_counts: dict[int, int],
+    feedback_affinity: dict[int, float] | None = None,
 ) -> tuple[float, str, dict[str, float]]:
     colors = [it.color for it in items]
     color_score = palette_compat_score(colors)
     weather_score, weather_reasons = _weather_adequacy(items, weather)
     ghost_bonus = _ghost_bonus(items, wear_counts)
 
-    score = 0.55 * color_score + 0.35 * weather_score + ghost_bonus
+    affinity_values = [
+        feedback_affinity[it.id]
+        for it in items
+        if feedback_affinity and it.id in feedback_affinity
+    ]
+    preference_bonus = (
+        0.04 * (sum(affinity_values) / len(affinity_values))
+        if affinity_values
+        else 0.0
+    )
+    score = 0.55 * color_score + 0.35 * weather_score + ghost_bonus + preference_bonus
     score = max(0.0, min(1.0, score))
 
     palette_str = ", ".join(c for c in colors if c) or "—"
@@ -198,12 +224,15 @@ def _score(
     rationale_parts.extend(weather_reasons)
     if ghost_bonus > 0:
         rationale_parts.append("contiene capi mai indossati")
+    if preference_bonus > 0.005:
+        rationale_parts.append("in linea con le tue preferenze")
     rationale = "; ".join(rationale_parts)
 
     return score, rationale, {
         "color": color_score,
         "weather": weather_score,
         "ghost": ghost_bonus,
+        "preference": preference_bonus,
     }
 
 
@@ -215,7 +244,7 @@ def suggest_outfits(
     rng: random.Random | None = None,
 ) -> list[OutfitCandidate]:
     """Genera fino a `count` proposte di outfit dal guardaroba, ordinate per score."""
-    pool = list(db.execute(select(Item)).scalars())
+    pool = list(db.execute(select(Item).where(Item.retired_at.is_(None))).scalars())
     if not pool:
         return []
 
@@ -224,6 +253,7 @@ def suggest_outfits(
         return []
 
     wear_counts = _wear_count_map(db)
+    feedback_affinity = _feedback_affinity_map(db)
     candidates = _build_candidates(eligible, wear_counts, weather, rng=rng)
 
     scored: list[OutfitCandidate] = []
@@ -233,7 +263,7 @@ def suggest_outfits(
         if key in seen_keys:
             continue
         seen_keys.add(key)
-        score, rationale, parts = _score(combo, weather, wear_counts)
+        score, rationale, parts = _score(combo, weather, wear_counts, feedback_affinity)
         scored.append(
             OutfitCandidate(
                 item_ids=key,

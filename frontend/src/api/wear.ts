@@ -15,12 +15,26 @@ export interface LogWearInput {
   occasion?: string
 }
 
+export interface BatchWearInput extends LogWearInput {
+  item_id: number
+}
+
 export async function logWear(itemId: number, input: LogWearInput = {}): Promise<WearEvent> {
   return jsonOrThrow<WearEvent>(
     await fetch(`${API_BASE}/items/${itemId}/wear`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
+    }),
+  )
+}
+
+export async function batchLogWears(events: BatchWearInput[]): Promise<WearEvent[]> {
+  return jsonOrThrow<WearEvent[]>(
+    await fetch(`${API_BASE}/wear-events/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events }),
     }),
   )
 }

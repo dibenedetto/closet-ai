@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import CoachCard from '../components/CoachCard'
+import Icon from '../components/Icon'
+import { ErrorView, LoadingView } from '../components/StateView'
 import { getLlmStatus, type LlmStatus } from '../api/ai'
+import { errorMessage } from '../api/client'
 import { getImpactStats, type ImpactStats } from '../api/circular'
+import { listItems, type Item } from '../api/items'
 import {
   getGapAnalysis,
   getGhostItems,
@@ -13,319 +17,273 @@ import {
   type WardrobeStats,
 } from '../api/stats'
 
-function StatCard({
-  label,
-  value,
-  sub,
-  highlight = false,
-}: {
-  label: string
-  value: string
-  sub?: string
-  highlight?: boolean
-}) {
+function co2Equivalents(kg: number) {
+  return {
+    km: Math.round(kg / .18),
+    flights: kg / 80,
+    forest: kg / 8,
+  }
+}
+
+function MetricCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="stat-card" style={highlight ? { borderColor: 'var(--ok)' } : undefined}>
-      <div className="label">{label}</div>
-      <div className="value" style={highlight ? { color: 'var(--ok)' } : undefined}>{value}</div>
-      {sub && <div className="sub">{sub}</div>}
+    <div className="metric-card">
+      <span className="metric-label">{label}</span>
+      <strong className="metric-value">{value}</strong>
+      <span className="metric-sub">{sub}</span>
     </div>
   )
 }
 
-/** Equivalenze CO₂ tangibili. Fonti indicative: 1 km auto media ≈ 0.18 kg CO₂eq,
- * 1 volo Pisa-Roma andata ≈ 80 kg pro capite, 1 m² di foresta assorbe ≈ 8 kg/anno. */
-function co2Equivalents(kg: number): { km: number; flights: number; trees: number } {
-  return {
-    km: Math.round(kg / 0.18),
-    flights: kg / 80,
-    trees: kg / 8,
-  }
-}
-
 export default function DashboardPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null)
-  const [ghosts, setGhosts] = useState<GhostItem[]>([])
   const [impact, setImpact] = useState<ImpactStats | null>(null)
   const [gap, setGap] = useState<GapAnalysis | null>(null)
+  const [ghosts, setGhosts] = useState<GhostItem[]>([])
+  const [items, setItems] = useState<Item[]>([])
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [partialError, setPartialError] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [ghostDays, setGhostDays] = useState(30)
 
-  useEffect(() => {
-    getLlmStatus().then(setLlmStatus).catch(() => setLlmStatus(null))
-    getGapAnalysis().then(setGap).catch(() => setGap(null))
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async () => {
+    setLoading(true)
     setError(null)
-    Promise.all([
+    const results = await Promise.allSettled([
       getWardrobeStats({ ghostAfterDays: ghostDays, topN: 5 }),
-      getGhostItems({ ghostAfterDays: ghostDays }),
       getImpactStats(),
+      getGapAnalysis(),
+      getGhostItems({ ghostAfterDays: ghostDays }),
+      listItems({ limit: 200 }),
+      getLlmStatus(),
     ])
-      .then(([s, g, i]) => {
-        if (!cancelled) {
-          setStats(s)
-          setGhosts(g)
-          setImpact(i)
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e))
-        }
-      })
-    return () => {
-      cancelled = true
-    }
+    const [statsResult, impactResult, gapResult, ghostsResult, itemsResult, llmResult] = results
+    if (statsResult.status === 'fulfilled') setStats(statsResult.value)
+    if (impactResult.status === 'fulfilled') setImpact(impactResult.value)
+    if (gapResult.status === 'fulfilled') setGap(gapResult.value)
+    if (ghostsResult.status === 'fulfilled') setGhosts(ghostsResult.value)
+    if (itemsResult.status === 'fulfilled') setItems(itemsResult.value)
+    if (llmResult.status === 'fulfilled') setLlmStatus(llmResult.value)
+    if (statsResult.status === 'rejected') setError(errorMessage(statsResult.reason))
+    setPartialError(results.slice(1).some((result) => result.status === 'rejected'))
+    setLoading(false)
   }, [ghostDays])
 
-  if (error) return <p className="error">Errore: {error}</p>
-  if (stats == null) return <p className="muted">Caricamento…</p>
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const activeItems = useMemo(() => items.filter((item) => !item.retired_at), [items])
+  const conditionCounts = useMemo(() => ({
+    buono: activeItems.filter((item) => item.condition === 'buono').length,
+    usurato: activeItems.filter((item) => item.condition === 'usurato').length,
+    danneggiato: activeItems.filter((item) => item.condition === 'danneggiato').length,
+    unknown: activeItems.filter((item) => item.condition == null).length,
+  }), [activeItems])
+
+  const conditionTotal = Math.max(activeItems.length, 1)
+  const maxActionCo2 = Math.max(...Object.values(impact?.co2_by_type ?? {}), 1)
+  const equivalent = co2Equivalents(impact?.total_co2_saved_kg ?? 0)
+
+  if (error && !stats) {
+    return <ErrorView message={error} action={<button type="button" onClick={() => void load()}><Icon name="refresh" size={17} /> Riprova</button>} />
+  }
+  if (!stats) return <LoadingView label="Misuro il tuo impatto…" />
 
   return (
     <section>
-      <div className="toolbar">
-        <h2 style={{ margin: 0 }}>Dashboard impatto</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label htmlFor="ghost-days" className="muted" style={{ margin: 0 }}>
-            Soglia fantasma (giorni)
-          </label>
-          <input
-            id="ghost-days"
-            type="number"
-            min={1}
-            max={365}
-            value={ghostDays}
-            onChange={(e) => setGhostDays(Number(e.target.value) || 30)}
-            style={{ width: 80 }}
-          />
-          <Link
-            to="/"
-            className="ghost"
-            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)' }}
-          >
-            ← Guardaroba
-          </Link>
+      <section className="impact-hero">
+        <div>
+          <div className="eyebrow" style={{ color: 'var(--lime)' }}>Il valore di usare meglio</div>
+          <h1>Il tuo guardaroba sta già facendo la differenza.</h1>
+          <p>
+            Impatto ambientale, stato dei capi e gap funzionali diventano azioni concrete:
+            riparare, riscoprire, donare—e comprare solo quando serve davvero.
+          </p>
         </div>
+        <div className="impact-total">
+          <span>CO₂eq evitata</span>
+          <strong>{impact?.total_co2_saved_kg.toFixed(1) ?? '—'}</strong>
+          <small>kg attraverso {impact?.total_actions ?? 0} azioni circolari</small>
+        </div>
+      </section>
+
+      <div className="toolbar" style={{ marginTop: 14 }}>
+        <div className="notice" style={{ margin: 0 }}>
+          <Icon name="clock" size={16} /> Un “capo fantasma” non viene usato da almeno
+          <label style={{ margin: 0 }}>
+            <span className="sr-only">Soglia giorni per capo fantasma</span>
+            <select value={ghostDays} onChange={(event) => setGhostDays(Number(event.target.value))} style={{ width: 88, minHeight: 36, paddingBlock: 5 }}>
+              {[30, 60, 90, 180].map((days) => <option key={days} value={days}>{days} giorni</option>)}
+            </select>
+          </label>
+        </div>
+        <button type="button" className="button button-secondary button-small" onClick={() => void load()} disabled={loading}>
+          <Icon name="refresh" size={15} /> {loading ? 'Aggiorno…' : 'Aggiorna dati'}
+        </button>
+      </div>
+
+      {partialError && <div className="notice notice-warning" role="status"><Icon name="circle-alert" size={17} /> Alcuni approfondimenti non sono disponibili; i dati principali restano aggiornati.</div>}
+
+      <div className="metric-grid">
+        <MetricCard label="Capi attivi" value={String(stats.total_items)} sub={`${items.length - activeItems.length} in seconda vita`} />
+        <MetricCard label="Utilizzi registrati" value={String(stats.total_wears)} sub={`media ${stats.avg_wears_per_item.toFixed(1)} per capo`} />
+        <MetricCard label="Cost-per-wear medio" value={stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'} sub="sui capi con prezzo e utilizzi" />
+        <MetricCard label="Capi da riscoprire" value={String(stats.ghost_count)} sub={`inattivi da più di ${stats.ghost_after_days} giorni`} />
       </div>
 
       <CoachCard llmConfigured={llmStatus?.configured ?? false} ghostAfterDays={ghostDays} />
 
-      {gap && gap.total_items > 0 && (
-        <section
-          className="panel"
-          style={{
-            marginBottom: 16,
-            borderColor: gap.balanced ? 'var(--ok)' : 'var(--warn)',
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            🧩 Analisi guardaroba
-            <span className="muted" style={{ fontSize: 11, marginLeft: 8, fontWeight: 400 }}>
-              {gap.source === 'neural-net' ? 'rete neurale' : 'regole'}
-            </span>
-          </h3>
-          {gap.balanced ? (
-            <p style={{ margin: 0, color: 'var(--ok)' }}>
-              Il tuo guardaroba è equilibrato: nessun vuoto funzionale rilevato. 🎉
-            </p>
+      <div className="insight-grid">
+        <section id="gaps" className="insight-card" aria-labelledby="gap-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Gap del guardaroba</div>
+              <h2 id="gap-title">Cosa manca davvero?</h2>
+              <p>Una rete neurale cerca vuoti funzionali, non nuove scuse per comprare.</p>
+            </div>
+            <span className="insight-icon"><Icon name="gap" size={21} /></span>
+          </header>
+          {gap?.balanced ? (
+            <div className="gap-result gap-result-balanced">
+              <span className="gap-probability" style={{ color: 'var(--ok)' }}>Equilibrato</span>
+              <h3>Nessun acquisto necessario</h3>
+              <p>Il guardaroba copre già le funzioni principali. Concentrati sulle combinazioni.</p>
+            </div>
+          ) : gap?.gaps.length ? (
+            <div style={{ display: 'grid', gap: 9 }}>
+              {gap.gaps.map((item) => (
+                <div className="gap-result" key={item.code}>
+                  {item.probability != null && <span className="gap-probability">{Math.round(item.probability * 100)}% confidenza</span>}
+                  <h3>{item.label}</h3>
+                  <p>{item.advice}</p>
+                </div>
+              ))}
+            </div>
           ) : (
-            <>
-              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-                La rete ha individuato {gap.gaps.length}{' '}
-                {gap.gaps.length === 1 ? 'vuoto funzionale' : 'vuoti funzionali'} —
-                prima di comprare, considera l'usato.
-              </p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-                {gap.gaps.map((g) => (
-                  <li
-                    key={g.code}
-                    style={{
-                      padding: 10,
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      background: 'var(--panel-2)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <strong style={{ fontSize: 13 }}>{g.label}</strong>
-                      {g.probability != null && (
-                        <span className="muted" style={{ fontSize: 11 }}>
-                          {Math.round(g.probability * 100)}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{g.advice}</div>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <p className="muted">La gap analysis sarà disponibile quando il guardaroba avrà abbastanza dati.</p>
+          )}
+          {gap && <p className="muted" style={{ margin: '13px 0 0', fontSize: 9 }}>Fonte: {gap.source === 'neural-net' ? 'rete neurale addestrata' : 'regole esperte'} · {gap.n_colors} colori · {gap.total_items} capi analizzati</p>}
+        </section>
+
+        <section id="condition" className="insight-card" aria-labelledby="condition-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Stato dei capi</div>
+              <h2 id="condition-title">Cosa richiede cura?</h2>
+              <p>La manutenzione anticipata prolunga la vita del capo e ne protegge il valore.</p>
+            </div>
+            <span className="insight-icon" style={{ background: 'var(--sun-soft)', color: 'var(--warn)' }}><Icon name="wrench" size={21} /></span>
+          </header>
+          <div className="condition-list">
+            {[
+              ['In buono stato', conditionCounts.buono, ''],
+              ['Da curare', conditionCounts.usurato, 'worn'],
+              ['Danneggiati', conditionCounts.danneggiato, 'damaged'],
+              ['Da verificare', conditionCounts.unknown, 'unknown'],
+            ].map(([label, count, className]) => (
+              <div className="condition-row" key={String(label)}>
+                <span>{label}</span>
+                <span className="condition-track"><span className={`condition-fill ${className}`} style={{ width: `${(Number(count) / conditionTotal) * 100}%` }} /></span>
+                <strong>{count}</strong>
+              </div>
+            ))}
+          </div>
+          {(conditionCounts.usurato + conditionCounts.danneggiato) > 0 && (
+            <p className="notice notice-warning" style={{ margin: '18px 0 0' }}><Icon name="wrench" size={16} /> {conditionCounts.usurato + conditionCounts.danneggiato} capi possono beneficiare di una piccola azione di cura.</p>
           )}
         </section>
-      )}
 
-      <div className="stats-grid">
-        <StatCard label="Capi totali" value={String(stats.total_items)} />
-        <StatCard
-          label="Utilizzi totali"
-          value={String(stats.total_wears)}
-          sub={`media ${stats.avg_wears_per_item.toFixed(2)} / capo`}
-        />
-        <StatCard
-          label="Capi fantasma"
-          value={String(stats.ghost_count)}
-          sub={`> ${stats.ghost_after_days} giorni senza utilizzo`}
-        />
-        <StatCard
-          label="Investimento totale"
-          value={stats.total_investment != null ? `€ ${stats.total_investment.toFixed(2)}` : '—'}
-        />
-        <StatCard
-          label="Cost-per-wear medio"
-          value={stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'}
-          sub="sui capi con prezzo e ≥ 1 utilizzo"
-        />
-        {impact && (
-          <>
-            <StatCard
-              label="CO₂ evitata"
-              value={`${impact.total_co2_saved_kg.toFixed(1)} kg`}
-              sub={`${impact.total_actions} azioni circolari`}
-              highlight={impact.total_co2_saved_kg > 0}
-            />
-            <StatCard
-              label="Capi salvati"
-              value={String(impact.repaired_items_count + impact.retired_items_count)}
-              sub={`${impact.repaired_items_count} riparati · ${impact.retired_items_count} ritirati`}
-            />
-          </>
-        )}
-      </div>
-
-      {impact && impact.total_co2_saved_kg > 0 && (
-        <section
-          className="panel"
-          style={{
-            marginBottom: 16,
-            background: 'linear-gradient(135deg, rgba(78,201,160,0.10) 0%, rgba(124,156,255,0.06) 100%)',
-            borderColor: 'var(--ok)',
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>🌱 Sostenibilità in pratica</h3>
-          {(() => {
-            const eq = co2Equivalents(impact.total_co2_saved_kg)
-            return (
-              <p style={{ fontSize: 15, lineHeight: 1.6, margin: '8px 0' }}>
-                Hai evitato <b>{impact.total_co2_saved_kg.toFixed(1)} kg di CO₂eq</b> grazie alle
-                tue {impact.total_actions} azioni circolari. È come{' '}
-                <b>{eq.km.toLocaleString('it-IT')} km</b> in auto risparmiati,{' '}
-                <b>{eq.flights.toFixed(2)}</b> voli Pisa-Roma evitati, o quanto assorbono{' '}
-                <b>{eq.trees.toFixed(1)} m²</b> di foresta in un anno.
-              </p>
-            )
-          })()}
-          <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
-            Stime indicative: 1 km auto media UE ≈ 0,18 kg CO₂eq · 1 volo PSA-FCO ≈ 80 kg pro capite · 1 m² foresta ≈ 8 kg CO₂/anno.
-          </p>
+        <section id="circular" className="insight-card" aria-labelledby="circular-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Impatto circolare</div>
+              <h2 id="circular-title">Da azione a CO₂ evitata.</h2>
+              <p>Ogni riparazione o seconda vita evita parte dell’impatto di un capo nuovo.</p>
+            </div>
+            <span className="insight-icon"><Icon name="recycle" size={21} /></span>
+          </header>
+          {impact && impact.total_actions > 0 ? (
+            <div className="bar-list">
+              {Object.entries(impact.actions_by_type).map(([type, count]) => {
+                const co2 = impact.co2_by_type[type] ?? 0
+                return (
+                  <div key={type}>
+                    <div className="bar-label"><strong style={{ textTransform: 'capitalize' }}>{type}</strong><span>{count} azioni · {co2.toFixed(1)} kg</span></div>
+                    <div className="bar-track"><div className="bar-fill" style={{ width: `${(co2 / maxActionCo2) * 100}%` }} /></div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : <p className="muted">Registra una riparazione, donazione o vendita dal dettaglio di un capo.</p>}
+          {impact && impact.total_co2_saved_kg > 0 && (
+            <div className="analysis-note" style={{ marginTop: 18 }}>
+              <Icon name="leaf" size={19} />
+              <p><strong>Un impatto che si vede</strong>Equivale indicativamente a {equivalent.km.toLocaleString('it-IT')} km in auto evitati, {equivalent.flights.toFixed(2)} voli Pisa–Roma o l’assorbimento annuale di {equivalent.forest.toFixed(1)} m² di foresta.</p>
+            </div>
+          )}
         </section>
-      )}
 
-      {impact && impact.total_actions > 0 && (
-        <section className="panel" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Azioni circolari per tipo</h3>
-          {(() => {
-            const maxCo2 = Math.max(...Object.values(impact.co2_by_type), 1)
-            return (
-              <div style={{ display: 'grid', gap: 10 }}>
-                {Object.entries(impact.actions_by_type).map(([type, count]) => {
-                  const co2 = impact.co2_by_type[type] ?? 0
-                  const pct = (co2 / maxCo2) * 100
-                  return (
-                    <div key={type}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: 12,
-                          marginBottom: 4,
-                        }}
-                      >
-                        <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{type}</span>
-                        <span className="muted">
-                          {count}× · −{co2.toFixed(1)} kg CO₂
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          height: 10,
-                          background: 'var(--panel-2)',
-                          borderRadius: 5,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${pct}%`,
-                            height: '100%',
-                            background:
-                              type === 'riparazione'
-                                ? 'var(--accent)'
-                                : type === 'riciclo'
-                                  ? 'var(--warn)'
-                                  : 'var(--ok)',
-                            transition: 'width 400ms ease',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
+        <section className="insight-card" aria-labelledby="top-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Campioni di utilizzo</div>
+              <h2 id="top-title">I capi che lavorano di più.</h2>
+              <p>Il miglior investimento è quello che entra davvero nella tua vita.</p>
+            </div>
+            <span className="insight-icon"><Icon name="trend" size={21} /></span>
+          </header>
+          <ol className="rank-list">
+            {stats.top_worn.map((item, index) => (
+              <li key={item.item_id}>
+                <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
+                <Link to={`/items/${item.item_id}`}>{item.name}</Link>
+                <span className="rank-value">{item.wear_count} usi</span>
+              </li>
+            ))}
+          </ol>
         </section>
-      )}
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-        <section className="panel">
-          <h3 style={{ marginTop: 0 }}>Top capi più indossati</h3>
-          {stats.top_worn.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>Nessun utilizzo registrato.</p>
+        <section className="insight-card" aria-labelledby="ghost-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Rotazione</div>
+              <h2 id="ghost-title">Capi da riscoprire.</h2>
+              <p>Prima di cercare qualcosa di nuovo, prova a riportarne uno in un outfit.</p>
+            </div>
+            <span className="insight-icon" style={{ background: 'var(--sun-soft)', color: 'var(--warn)' }}><Icon name="hanger" size={21} /></span>
+          </header>
+          {ghosts.length === 0 ? (
+            <div className="notice notice-success"><Icon name="check" size={17} /> Tutti i capi sono in rotazione.</div>
           ) : (
-            <ol style={{ paddingLeft: 18, margin: 0 }}>
-              {stats.top_worn.map((t) => (
-                <li key={t.item_id} style={{ marginBottom: 6 }}>
-                  <Link to={`/items/${t.item_id}`}>{t.name}</Link>{' '}
-                  <span className="muted">— {t.wear_count} utilizzi</span>
+            <ol className="rank-list">
+              {ghosts.slice(0, 5).map((item, index) => (
+                <li key={item.item_id}>
+                  <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
+                  <Link to={`/items/${item.item_id}`}>{item.name}</Link>
+                  <span className="rank-value">{item.days_owned ?? '?'}g</span>
                 </li>
               ))}
             </ol>
           )}
         </section>
 
-        <section className="panel">
-          <h3 style={{ marginTop: 0 }}>Capi fantasma</h3>
-          {ghosts.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>Nessuno: tutti i capi sono stati indossati. 🎉</p>
-          ) : (
-            <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
-              {ghosts.map((g) => (
-                <li
-                  key={g.item_id}
-                  style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}
-                >
-                  <Link to={`/items/${g.item_id}`}>{g.name}</Link>
-                  <span className="muted">
-                    {' '}— {g.days_owned ?? '?'}g posseduto
-                    {g.price != null ? ` · € ${g.price.toFixed(2)}` : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+        <section className="insight-card" aria-labelledby="investment-title">
+          <header className="insight-card-header">
+            <div>
+              <div className="eyebrow">Valore economico</div>
+              <h2 id="investment-title">Compra meno, usa meglio.</h2>
+              <p>Prezzo e utilizzo raccontano se un acquisto sta generando valore reale.</p>
+            </div>
+            <span className="insight-icon" style={{ background: 'var(--blue-soft)', color: 'var(--blue)' }}><Icon name="euro" size={21} /></span>
+          </header>
+          <div className="detail-metrics" style={{ margin: 0 }}>
+            <div className="detail-metric"><span>Valore catalogato</span><strong>{stats.total_investment != null ? `€ ${stats.total_investment.toFixed(0)}` : '—'}</strong></div>
+            <div className="detail-metric"><span>CPW medio</span><strong>{stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'}</strong></div>
+            <div className="detail-metric"><span>Media utilizzi</span><strong>{stats.avg_wears_per_item.toFixed(1)}</strong></div>
+          </div>
+          <p className="muted" style={{ margin: '14px 0 0', fontSize: 9 }}>Indicatori descrittivi del guardaroba catalogato; non sono valutazioni finanziarie.</p>
         </section>
       </div>
     </section>

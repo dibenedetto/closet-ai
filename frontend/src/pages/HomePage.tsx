@@ -1,38 +1,64 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 
+import Icon from '../components/Icon'
+import ItemImage from '../components/ItemImage'
+import LifecycleRail from '../components/LifecycleRail'
+import StatusBadge from '../components/StatusBadge'
+import { EmptyView, ErrorView } from '../components/StateView'
+import { errorMessage } from '../api/client'
+import { getImpactStats, type ImpactStats } from '../api/circular'
 import { itemImageUrl, listItems, type Item } from '../api/items'
+import {
+  getGapAnalysis,
+  getWardrobeStats,
+  type GapAnalysis,
+  type WardrobeStats,
+} from '../api/stats'
 import { logWear } from '../api/wear'
-import { getWardrobeStats, type WardrobeStats } from '../api/stats'
 
 type StatusFilter = 'all' | 'active' | 'retired'
 
 export default function HomePage() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [stats, setStats] = useState<WardrobeStats | null>(null)
+  const [impact, setImpact] = useState<ImpactStats | null>(null)
+  const [gap, setGap] = useState<GapAnalysis | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [signalError, setSignalError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [wearing, setWearing] = useState<number | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [mutationError, setMutationError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<string>('')
+  const [category, setCategory] = useState('')
   const [status, setStatus] = useState<StatusFilter>('active')
+
+  const loadSignals = useCallback(async () => {
+    const results = await Promise.allSettled([
+      getWardrobeStats({ topN: 5 }),
+      getImpactStats(),
+      getGapAnalysis(),
+    ])
+    const [statsResult, impactResult, gapResult] = results
+    if (statsResult.status === 'fulfilled') setStats(statsResult.value)
+    if (impactResult.status === 'fulfilled') setImpact(impactResult.value)
+    if (gapResult.status === 'fulfilled') setGap(gapResult.value)
+    setSignalError(results.some((result) => result.status === 'rejected'))
+  }, [])
 
   const load = useCallback(async () => {
     setRefreshing(true)
     try {
-      const [list, ws] = await Promise.all([
-        listItems({ limit: 200 }),
-        getWardrobeStats({ topN: 5 }),
-      ])
-      setItems(list)
-      setStats(ws)
+      setItems(await listItems({ limit: 200 }))
       setError(null)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setRefreshing(false)
     }
-  }, [])
+    await loadSignals()
+  }, [loadSignals])
 
   useEffect(() => {
     void load()
@@ -40,200 +66,227 @@ export default function HomePage() {
 
   async function onQuickWear(ev: MouseEvent<HTMLButtonElement>, item: Item) {
     ev.preventDefault()
-    ev.stopPropagation()
     if (wearing != null) return
     setWearing(item.id)
+    setNotice(null)
+    setMutationError(null)
     try {
       await logWear(item.id)
-      void load()
+      setNotice(`Utilizzo registrato per ${item.name}.`)
+      await loadSignals()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setMutationError(errorMessage(e))
     } finally {
       setWearing(null)
     }
   }
 
   const categories = useMemo(() => {
-    if (!items) return []
-    const set = new Set<string>()
-    for (const it of items) {
-      if (it.category) set.add(it.category)
-    }
-    return [...set].sort()
+    const values = new Set<string>()
+    for (const item of items ?? []) if (item.category) values.add(item.category)
+    return [...values].sort((a, b) => a.localeCompare(b, 'it'))
   }, [items])
 
   const filtered = useMemo(() => {
-    if (!items) return []
-    const q = search.trim().toLowerCase()
-    return items.filter((it) => {
-      if (status === 'active' && it.retired_at) return false
-      if (status === 'retired' && !it.retired_at) return false
-      if (category && it.category !== category) return false
-      if (q) {
-        const hay = `${it.name} ${it.category ?? ''} ${it.color ?? ''}`.toLowerCase()
-        if (!hay.includes(q)) return false
-      }
-      return true
+    const q = search.trim().toLocaleLowerCase('it')
+    return (items ?? []).filter((item) => {
+      if (status === 'active' && item.retired_at) return false
+      if (status === 'retired' && !item.retired_at) return false
+      if (category && item.category !== category) return false
+      if (!q) return true
+      return `${item.name} ${item.category ?? ''} ${item.color ?? ''}`.toLocaleLowerCase('it').includes(q)
     })
   }, [items, search, category, status])
 
-  if (error) {
-    return (
-      <p className="error">
-        Errore: {error} <button className="ghost" onClick={() => void load()}>Riprova</button>
-      </p>
-    )
+  const activeItems = useMemo(() => (items ?? []).filter((item) => !item.retired_at), [items])
+  const needsCare = activeItems.filter((item) => item.condition === 'usurato' || item.condition === 'danneggiato').length
+  const unknownCondition = activeItems.filter((item) => item.condition == null).length
+  const firstGap = gap?.gaps[0]
+  function clearFilters() {
+    setSearch('')
+    setCategory('')
+    setStatus('active')
   }
-  if (items == null) {
+
+  if (error && items == null) {
     return (
-      <div>
-        <div className="hero-banner">
-          {[0, 1, 2, 3].map((i) => (
-            <div className="metric" key={i}>
-              <div className="skeleton line short" />
-              <div className="skeleton line" style={{ height: 22, width: '60%' }} />
-            </div>
-          ))}
-        </div>
-        <div className="items-grid">
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div className="skeleton card" key={i} />
-          ))}
-        </div>
-      </div>
+      <ErrorView
+        message={error}
+        action={<button type="button" onClick={() => void load()}><Icon name="refresh" size={17} /> Riprova</button>}
+      />
     )
   }
 
   return (
     <>
-      <nav className="story-strip" aria-label="Il ciclo di vita di un capo">
-        <Link to="/items/new"><span className="step-num">1</span><span className="step-icon">📷</span>Fotografalo</Link>
-        <Link to="/"><span className="step-num">2</span><span className="step-icon">✓</span>Indossalo</Link>
-        <Link to="/today"><span className="step-num">3</span><span className="step-icon">👗</span>Cosa metto?</Link>
-        <Link to="/dashboard"><span className="step-num">4</span><span className="step-icon">🛠️</span>Riparalo</Link>
-        <Link to="/dashboard"><span className="step-num">5</span><span className="step-icon">🧩</span>Serve altro?</Link>
-        <Link to="/dashboard"><span className="step-num">6</span><span className="step-icon">♻️</span>Seconda vita</Link>
-      </nav>
-
-      {stats && (
-        <div className="hero-banner">
-          <div className="metric">
-            <span className="label">Capi attivi</span>
-            <span className="value">{stats.total_items}</span>
-            <span className="sub">nel guardaroba</span>
-          </div>
-          <div className="metric">
-            <span className="label">Utilizzi totali</span>
-            <span className="value">{stats.total_wears}</span>
-            <span className="sub">media {stats.avg_wears_per_item.toFixed(1)} / capo</span>
-          </div>
-          <div className="metric">
-            <span className="label">Capi fantasma</span>
-            <span className="value" style={{ color: stats.ghost_count > 0 ? 'var(--warn)' : 'var(--ok)' }}>
-              {stats.ghost_count}
-            </span>
-            <span className="sub">mai indossati &gt; 30g</span>
-          </div>
-          <div className="metric">
-            <span className="label">Cost-per-wear</span>
-            <span className="value">
-              {stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'}
-            </span>
-            <span className="sub">medio</span>
-          </div>
-        </div>
-      )}
-
-      <div className="toolbar">
-        <h2 style={{ margin: 0 }}>Guardaroba</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-          <span className="count">
-            {filtered.length} di {items.length} {items.length === 1 ? 'capo' : 'capi'}
-          </span>
-          <button className="ghost" onClick={() => void load()} disabled={refreshing}>
-            {refreshing ? '…' : 'Aggiorna'}
-          </button>
-        </div>
-      </div>
-
-      <div className="filter-bar">
-        <input
-          type="text"
-          placeholder="🔍 Cerca per nome, categoria, colore…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">Tutte le categorie</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className={`chip ${status === 'all' ? 'active' : ''}`}
-          onClick={() => setStatus('all')}
-        >
-          Tutti
-        </button>
-        <button
-          type="button"
-          className={`chip ${status === 'active' ? 'active' : ''}`}
-          onClick={() => setStatus('active')}
-        >
-          Attivi
-        </button>
-        <button
-          type="button"
-          className={`chip ${status === 'retired' ? 'active' : ''}`}
-          onClick={() => setStatus('retired')}
-        >
-          Ritirati
-        </button>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="empty-state">
-          {items.length === 0 ? (
-            <>
-              Nessun capo nel guardaroba.{' '}
-              <Link to="/items/new">Aggiungi il primo →</Link>
-            </>
-          ) : (
-            'Nessun capo corrisponde ai filtri.'
-          )}
-        </div>
-      ) : (
-        <div className="items-grid">
-          {filtered.map((it) => (
-            <Link key={it.id} to={`/items/${it.id}`} className="item-card">
-              {it.image_path && (
-                <img src={itemImageUrl(it.id)} alt={it.name} loading="lazy" />
-              )}
-              <div className="body">
-                <strong>{it.name}</strong>
-                <div className="muted">
-                  {[it.category, it.color].filter(Boolean).join(' • ') || '—'}
-                </div>
-                {it.price != null && (
-                  <div className="price">€ {it.price.toFixed(2)}</div>
-                )}
-              </div>
-              {!it.retired_at && (
-                <button
-                  type="button"
-                  className="quick-wear"
-                  title="Registra che l'hai indossato oggi"
-                  onClick={(ev) => void onQuickWear(ev, it)}
-                  disabled={wearing === it.id}
-                >
-                  {wearing === it.id ? '…' : '✓ oggi'}
-                </button>
-              )}
+      <section className="home-hero">
+        <div className="home-hero-copy">
+          <div className="eyebrow">Il guardaroba che lavora per te</div>
+          <h1>Vesti meglio.<br />Compra meno.</h1>
+          <p>
+            ClosetAI trasforma ciò che possiedi in outfit, cura e impatto misurabile—
+            così ogni capo viene usato più a lungo.
+          </p>
+          <div className="button-row">
+            <Link to="/today" className="button button-primary">
+              <Icon name="sparkles" size={18} /> Crea l'outfit di oggi
             </Link>
-          ))}
+            <Link to="/items/new" className="button button-secondary">
+              <Icon name="camera" size={18} /> Aggiungi un capo
+            </Link>
+          </div>
+        </div>
+        <Link to="/dashboard#circular" className="hero-impact">
+          <span className="hero-impact-icon"><Icon name="leaf" size={24} /></span>
+          <div>
+            <span className="hero-impact-label">Impatto verde</span>
+            <strong className="hero-impact-value">
+              {impact ? impact.total_co2_saved_kg.toFixed(1) : '—'}<small> kg</small>
+            </strong>
+            <p>CO₂eq evitata grazie a riparazione, riuso e seconda vita.</p>
+          </div>
+          <span className="hero-impact-link">
+            Esplora il tuo impatto <Icon name="arrow-right" size={17} />
+          </span>
+        </Link>
+      </section>
+
+      {signalError && (
+        <div className="notice notice-warning" role="status" style={{ marginTop: 14 }}>
+          <Icon name="circle-alert" size={17} /> Alcuni indicatori non sono aggiornati. Il guardaroba resta disponibile.
         </div>
       )}
+
+      <section className="signal-grid" aria-label="Segnali principali del guardaroba">
+        <Link to="/#wardrobe" className="signal-card usage">
+          <div className="signal-card-top">
+            <span className="signal-icon"><Icon name="trend" size={20} /></span>
+            <span className="signal-kicker">Uso reale</span>
+          </div>
+          <strong className="signal-value">{stats?.total_wears ?? '—'} utilizzi</strong>
+          <p>{stats ? `Media ${stats.avg_wears_per_item.toFixed(1)} per capo attivo.` : 'Sto calcolando il ritmo del tuo guardaroba.'}</p>
+        </Link>
+
+        <Link to="/dashboard#condition" className="signal-card state">
+          <div className="signal-card-top">
+            <span className="signal-icon"><Icon name="wrench" size={20} /></span>
+            <span className="signal-kicker">Stato dei capi</span>
+          </div>
+          <strong className="signal-value">{needsCare > 0 ? `${needsCare} da curare` : 'Tutto in ordine'}</strong>
+          <p>{unknownCondition > 0 ? `${unknownCondition} capi aspettano ancora una diagnosi.` : 'Tutti i capi attivi hanno uno stato verificato.'}</p>
+        </Link>
+
+        <Link to="/dashboard#gaps" className="signal-card gap">
+          <div className="signal-card-top">
+            <span className="signal-icon"><Icon name="gap" size={20} /></span>
+            <span className="signal-kicker">Gap del guardaroba</span>
+          </div>
+          <strong className="signal-value">{gap?.balanced ? 'Ben bilanciato' : firstGap?.label ?? 'In analisi'}</strong>
+          <p>{gap?.balanced ? 'Non emerge nessun acquisto necessario.' : firstGap?.advice ?? 'La rete sta cercando eventuali vuoti funzionali.'}</p>
+        </Link>
+      </section>
+
+      <LifecycleRail />
+
+      <section id="wardrobe" className="wardrobe-section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">La tua collezione</div>
+            <h2>Guardaroba</h2>
+          </div>
+          <div className="button-row">
+            <span className="result-count">{filtered.length} di {items?.length ?? 0} capi</span>
+            <button type="button" className="button button-secondary button-small" onClick={() => void load()} disabled={refreshing}>
+              <Icon name="refresh" size={15} /> {refreshing ? 'Aggiorno…' : 'Aggiorna'}
+            </button>
+          </div>
+        </div>
+
+        <div className="wardrobe-toolbar">
+          <label className="search-field">
+            <span className="sr-only">Cerca nel guardaroba</span>
+            <Icon name="search" size={18} />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Cerca per nome, categoria o colore"
+            />
+          </label>
+          <label>
+            <span className="sr-only">Filtra per categoria</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="">Tutte le categorie</option>
+              {categories.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+          <div className="segmented-control" role="group" aria-label="Stato del guardaroba">
+            {(['active', 'all', 'retired'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={status === value ? 'active' : ''}
+                aria-pressed={status === value}
+                onClick={() => setStatus(value)}
+              >
+                {value === 'active' ? 'Attivi' : value === 'all' ? 'Tutti' : 'Seconda vita'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {notice && <div className="notice notice-success" role="status"><Icon name="check" size={17} /> {notice}</div>}
+        {mutationError && <div className="error" role="alert"><Icon name="circle-alert" size={17} /> {mutationError}</div>}
+
+        {items == null ? (
+          <div className="items-grid" aria-label="Caricamento guardaroba">
+            {Array.from({ length: 8 }, (_, index) => <div className="skeleton card" key={index} />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyView
+            icon={items.length === 0 ? 'hanger' : 'search'}
+            title={items.length === 0 ? 'Il tuo guardaroba parte da qui' : 'Nessun capo corrisponde'}
+            message={items.length === 0 ? 'Fotografa il primo capo: ClosetAI riconoscerà categoria e colore.' : 'Prova a modificare o azzerare i filtri.'}
+            action={items.length === 0
+              ? <Link to="/items/new" className="button button-primary"><Icon name="camera" size={17} /> Aggiungi il primo capo</Link>
+              : <button type="button" className="button button-secondary" onClick={clearFilters}>Azzera filtri</button>}
+          />
+        ) : (
+          <div className="items-grid">
+            {filtered.map((item) => (
+              <article key={item.id} className="item-card">
+                <Link to={`/items/${item.id}`} className="item-card-media" aria-label={`Apri ${item.name}`}>
+                  {item.retired_at && <span className="item-card-retired">Seconda vita</span>}
+                  <ItemImage src={itemImageUrl(item.id)} alt={item.name} />
+                </Link>
+                <div className="item-card-body">
+                  <div className="item-card-heading">
+                    <div>
+                      <Link to={`/items/${item.id}`} className="item-card-name">{item.name}</Link>
+                      <div className="item-card-meta">{[item.category, item.color].filter(Boolean).join(' · ') || 'Da classificare'}</div>
+                    </div>
+                    {!item.retired_at && <StatusBadge condition={item.condition} />}
+                  </div>
+                  <div className="item-card-footer">
+                    <span className="item-card-price">{item.price != null ? `€ ${item.price.toFixed(2)}` : 'Prezzo non indicato'}</span>
+                    {!item.retired_at && (
+                      <button
+                        type="button"
+                        className="quick-wear"
+                        aria-label={`Registra che hai indossato ${item.name} oggi`}
+                        onClick={(event) => void onQuickWear(event, item)}
+                        disabled={wearing === item.id}
+                      >
+                        <Icon name="check" size={13} /> {wearing === item.id ? 'Registro…' : 'Indossato'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </>
   )
 }

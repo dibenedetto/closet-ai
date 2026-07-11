@@ -73,6 +73,7 @@ export default function MirrorPage() {
 
   return (
     <div className="mirror-root">
+      <h1 className="sr-only">Specchio intelligente ClosetAI</h1>
       <header
         style={{
           display: 'flex',

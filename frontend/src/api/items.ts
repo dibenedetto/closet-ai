@@ -34,6 +34,14 @@ export interface CreateItemInput {
   image: File
 }
 
+export interface UpdateItemInput {
+  name?: string
+  category?: string | null
+  color?: string | null
+  price?: number | null
+  purchase_date?: string | null
+}
+
 export interface ListItemsOptions {
   skip?: number
   limit?: number
@@ -50,6 +58,16 @@ export async function listItems(opts: ListItemsOptions = {}): Promise<Item[]> {
 
 export async function getItem(id: number): Promise<Item> {
   return jsonOrThrow<Item>(await fetch(`${API_BASE}/items/${id}`))
+}
+
+export async function updateItem(id: number, input: UpdateItemInput): Promise<Item> {
+  return jsonOrThrow<Item>(
+    await fetch(`${API_BASE}/items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  )
 }
 
 export async function createItem(input: CreateItemInput): Promise<Item> {

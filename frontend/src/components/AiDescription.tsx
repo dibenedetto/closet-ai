@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { describeItem } from '../api/ai'
+import { errorMessage } from '../api/client'
 import type { Item } from '../api/items'
 
 export default function AiDescription({
@@ -28,7 +29,7 @@ export default function AiDescription({
       if (out.description) onUpdated(out.description)
       if (out.model) setModelUsed(out.model)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
     }

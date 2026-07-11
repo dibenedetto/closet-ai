@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { errorMessage } from '../api/client'
 import type { Condition, Item } from '../api/items'
 import {
   deleteAction,
@@ -11,199 +12,192 @@ import {
   type DiagnoseResponse,
   type ItemAction,
 } from '../api/circular'
+import Icon, { type IconName } from './Icon'
 
-const CONDITIONS: Condition[] = ['buono', 'usurato', 'danneggiato']
+const CONDITIONS: Array<{ value: Condition; label: string }> = [
+  { value: 'buono', label: 'In buono stato' },
+  { value: 'usurato', label: 'Da curare' },
+  { value: 'danneggiato', label: 'Danneggiato' },
+]
 
-function fmtDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('it-IT')
-  } catch {
-    return iso
-  }
+const ACTIONS: Record<ActionType, { label: string; icon: IconName }> = {
+  riparazione: { label: 'Ripara', icon: 'wrench' },
+  swap: { label: 'Scambia', icon: 'refresh' },
+  vendita: { label: 'Vendi', icon: 'tag' },
+  donazione: { label: 'Dona', icon: 'heart' },
+  riciclo: { label: 'Ricicla', icon: 'recycle' },
 }
 
-export default function CircularSection({
-  item,
-  onItemRefresh,
-}: {
-  item: Item
-  onItemRefresh: () => void
-}) {
+function fmtDate(iso: string): string {
+  const value = new Date(iso)
+  return Number.isNaN(value.getTime()) ? iso : value.toLocaleString('it-IT')
+}
+
+export default function CircularSection({ item, onItemRefresh }: { item: Item; onItemRefresh: () => void }) {
   const [diagnosis, setDiagnosis] = useState<DiagnoseResponse | null>(null)
-  const [actions, setActions] = useState<ItemAction[]>([])
+  const [actions, setActions] = useState<ItemAction[] | null>(null)
+  const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     setBusy(true)
     setError(null)
-    try {
-      const [d, a] = await Promise.all([diagnoseItem(item.id), listActions(item.id)])
-      setDiagnosis(d)
-      setActions(a)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
+    const [diagnosisResult, actionsResult] = await Promise.allSettled([diagnoseItem(item.id), listActions(item.id)])
+    if (diagnosisResult.status === 'fulfilled') setDiagnosis(diagnosisResult.value)
+    if (actionsResult.status === 'fulfilled') setActions(actionsResult.value)
+    if (diagnosisResult.status === 'rejected' || actionsResult.status === 'rejected') {
+      const reason = diagnosisResult.status === 'rejected' ? diagnosisResult.reason : actionsResult.status === 'rejected' ? actionsResult.reason : null
+      setError(errorMessage(reason))
     }
+    setBusy(false)
   }, [item.id])
 
   useEffect(() => {
     void refresh()
-    // refresh dipende dal solo item.id; le re-render esterne non rilanciano la diagnosi.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.id])
+  }, [refresh])
 
-  async function onChangeCondition(c: Condition) {
+  const suggestions = useMemo(
+    () => (diagnosis?.suggestions ?? []).filter((suggestion) => !item.retired_at || suggestion.action_type === 'riparazione'),
+    [diagnosis, item.retired_at],
+  )
+
+  async function onChangeCondition(condition: Condition) {
     setBusy(true)
+    setError(null)
     try {
-      const updated = await setItemCondition(item.id, c)
-      setDiagnosis(updated)
+      setDiagnosis(await setItemCondition(item.id, condition))
+      setNotice('Stato del capo aggiornato.')
       onItemRefresh()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch (reason: unknown) {
+      setError(errorMessage(reason))
     } finally {
       setBusy(false)
     }
   }
 
-  async function onExecute(action_type: ActionType, co2: number) {
-    if (item.retired_at && action_type !== 'riparazione') {
-      if (!confirm('Il capo è già ritirato. Registrare comunque una nuova azione?')) {
-        return
-      }
-    }
-    if (!confirm(
-        `Registrare "${action_type}" su questo capo? Risparmio CO₂ stimato: ${co2} kg.`,
-    )) {
-      return
-    }
+  async function onExecute(actionType: ActionType, co2: number) {
+    if (!confirm(`Registrare “${ACTIONS[actionType].label}”? Impatto stimato: ${co2} kg di CO₂eq evitata.`)) return
     setBusy(true)
+    setError(null)
+    setNotice(null)
     try {
-      const created = await registerAction(item.id, { action_type })
-      setActions((prev) => [created, ...prev])
+      const created = await registerAction(item.id, { action_type: actionType, notes: notes.trim() || undefined })
+      setActions((current) => [created, ...(current ?? [])])
+      setNotes('')
+      setNotice(`${ACTIONS[actionType].label} registrato: −${created.co2_saved_kg} kg di CO₂eq.`)
       onItemRefresh()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch (reason: unknown) {
+      setError(errorMessage(reason))
     } finally {
       setBusy(false)
     }
   }
 
-  async function onRemoveAction(a: ItemAction) {
-    if (!confirm('Eliminare questa azione?')) return
+  async function onRemoveAction(action: ItemAction) {
+    if (!confirm(`Rimuovere l’azione “${ACTIONS[action.action_type].label}”?`)) return
     setBusy(true)
     try {
-      await deleteAction(a.id)
-      setActions((prev) => prev.filter((x) => x.id !== a.id))
+      await deleteAction(action.id)
+      setActions((current) => (current ?? []).filter((value) => value.id !== action.id))
+      setNotice('Azione rimossa e impatto ricalcolato.')
       onItemRefresh()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch (reason: unknown) {
+      setError(errorMessage(reason))
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div className="circular-card">
-      <h3>Azioni circolari</h3>
+    <section className="circular-card" aria-labelledby="circular-title">
+      <div className="eyebrow">Cura e seconda vita</div>
+      <h2 id="circular-title" style={{ marginTop: 5 }}>Qual è il prossimo gesto giusto?</h2>
+      <p className="muted" style={{ fontSize: 11 }}>Lo stato del capo guida azioni che ne allungano la vita e rendono visibile l’impatto evitato.</p>
 
-      {error && <p className="error">{error}</p>}
+      {error && <div className="error" role="alert"><Icon name="circle-alert" size={17} /> {error}</div>}
+      {notice && <div className="notice notice-success" role="status"><Icon name="check" size={17} /> {notice}</div>}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-        <label htmlFor="cond" className="muted" style={{ margin: 0 }}>
-          Condizione
+      <div className="form-grid" style={{ marginTop: 18 }}>
+        <label className="field" htmlFor={`condition-${item.id}`}>
+          Stato del capo
+          <select
+            id={`condition-${item.id}`}
+            value={diagnosis?.condition ?? item.condition ?? 'buono'}
+            onChange={(event) => void onChangeCondition(event.target.value as Condition)}
+            disabled={busy}
+          >
+            {CONDITIONS.map((condition) => <option key={condition.value} value={condition.value}>{condition.label}</option>)}
+          </select>
         </label>
-        <select
-          id="cond"
-          value={diagnosis?.condition ?? item.condition ?? ''}
-          onChange={(e) => void onChangeCondition(e.target.value as Condition)}
-          disabled={busy}
-          style={{
-            background: 'var(--panel-2)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '6px 10px',
-          }}
-        >
-          {CONDITIONS.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        {diagnosis && (
-          <span className="muted" style={{ fontSize: 12 }}>
-            {diagnosis.rationale}
-          </span>
-        )}
+        <label className="field" htmlFor={`action-notes-${item.id}`}>
+          Nota per la prossima azione
+          <input
+            id={`action-notes-${item.id}`}
+            type="text"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Es. zip sostituita, donato al mercatino…"
+          />
+        </label>
       </div>
 
-      {item.retired_at && (
-        <p className="muted" style={{ fontSize: 12 }}>
-          ⓘ Capo ritirato il {fmtDate(item.retired_at)}. Le azioni nuove sono opzionali.
-        </p>
+      {diagnosis && (
+        <div className="analysis-note">
+          <Icon name="wand" size={18} />
+          <p><strong>Diagnosi {diagnosis.source === 'clip-mlp' ? 'dalla rete neurale' : 'da regole esperte'}</strong>{diagnosis.rationale}</p>
+        </div>
       )}
 
-      {diagnosis && diagnosis.suggestions.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 16 }}>Suggerimenti</h3>
-          {diagnosis.suggestions.map((s) => (
-            <div className="suggestion-row" key={s.action_type}>
-              <div className="info">
-                <strong>{s.action_type}</strong>
-                <span className="muted" style={{ fontSize: 12 }}>{s.rationale}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="co2">−{s.co2_saved_kg} kg CO₂</span>
-                <button
-                  onClick={() => void onExecute(s.action_type, s.co2_saved_kg)}
-                  disabled={busy}
-                >
-                  Esegui
-                </button>
-              </div>
-            </div>
-          ))}
-        </>
-      )}
+      {item.retired_at && <div className="notice" style={{ marginTop: 12 }}><Icon name="recycle" size={17} /> In seconda vita dal {fmtDate(item.retired_at)}. Le azioni di ritiro non vengono proposte di nuovo.</div>}
 
-      <h3 style={{ marginTop: 16 }}>Storico azioni ({actions.length})</h3>
-      {actions.length === 0 ? (
-        <p className="muted" style={{ margin: 0 }}>Nessuna azione registrata.</p>
+      <div className="section-heading" style={{ marginTop: 26 }}>
+        <div><div className="eyebrow">Azioni suggerite</div><h3 style={{ margin: '5px 0 0' }}>Fai durare il capo più a lungo</h3></div>
+      </div>
+      {busy && !diagnosis ? (
+        <p className="muted" role="status">Analizzo stato, età e utilizzi…</p>
+      ) : suggestions.length === 0 ? (
+        <p className="muted">Nessuna azione urgente: continua a usare e prenderti cura del capo.</p>
+      ) : suggestions.map((suggestion) => (
+        <div className="suggestion-row" key={suggestion.action_type}>
+          <div className="info">
+            <strong style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Icon name={ACTIONS[suggestion.action_type].icon} size={16} /> {ACTIONS[suggestion.action_type].label}
+            </strong>
+            <span className="muted" style={{ fontSize: 11 }}>{suggestion.rationale}</span>
+          </div>
+          <div className="button-row" style={{ alignItems: 'center' }}>
+            <span className="co2">−{suggestion.co2_saved_kg} kg CO₂</span>
+            <button type="button" className="button button-small" onClick={() => void onExecute(suggestion.action_type, suggestion.co2_saved_kg)} disabled={busy}>
+              Registra
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <div className="section-heading" style={{ marginTop: 28 }}>
+        <div><div className="eyebrow">Storico circolare</div><h3 style={{ margin: '5px 0 0' }}>{actions?.length ?? 0} azioni registrate</h3></div>
+      </div>
+      {actions == null ? (
+        <p className="muted" role="status">Carico lo storico…</p>
+      ) : actions.length === 0 ? (
+        <p className="muted">La prima azione circolare apparirà qui.</p>
       ) : (
-        <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
-          {actions.map((a) => (
-            <li
-              key={a.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '6px 0',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
+        <ul className="rank-list">
+          {actions.map((action, index) => (
+            <li key={action.id} style={{ gridTemplateColumns: '28px 1fr auto auto' }}>
+              <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
               <span>
-                <b style={{ textTransform: 'capitalize' }}>{a.action_type}</b>
-                <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>
-                  · {fmtDate(a.created_at)}
-                  {a.notes && ` · ${a.notes}`}
-                </span>
+                <strong style={{ fontSize: 11 }}>{ACTIONS[action.action_type].label}</strong>
+                <span className="muted" style={{ display: 'block', fontSize: 9 }}>{fmtDate(action.created_at)}{action.notes ? ` · ${action.notes}` : ''}</span>
               </span>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="co2">−{a.co2_saved_kg} kg</span>
-                <button
-                  className="del-event"
-                  onClick={() => void onRemoveAction(a)}
-                  disabled={busy}
-                >
-                  rimuovi
-                </button>
-              </span>
+              <span className="co2">−{action.co2_saved_kg} kg</span>
+              <button type="button" className="del-event" aria-label={`Rimuovi azione ${ACTIONS[action.action_type].label}`} onClick={() => void onRemoveAction(action)} disabled={busy}>Rimuovi</button>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   )
 }

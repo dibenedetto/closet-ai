@@ -145,6 +145,23 @@ def test_suggest_empty_wardrobe(client, stub_weather) -> None:
     assert r.json()["outfits"] == []
 
 
+def test_suggest_excludes_retired_items(client, png, stub_weather) -> None:
+    stub_weather(temperature_c=18.0)
+    retired_top = _create(client, png, "Camicia donata", "camicia", "bianco")
+    _create(client, png, "Jeans attivi", "jeans", "blu")
+    retired = client.post(
+        f"/api/v1/items/{retired_top['id']}/actions",
+        json={"action_type": "donazione"},
+    )
+    assert retired.status_code == 201, retired.text
+
+    r = client.get("/api/v1/outfits/suggest")
+
+    assert r.status_code == 200, r.text
+    # Senza la camicia ritirata non esiste una coppia top + bottom valida.
+    assert r.json()["outfits"] == []
+
+
 def test_suggest_accepts_date_and_coords(client, png, stub_weather) -> None:
     stub_weather()
     _create(client, png, "Camicia", "camicia", "blu")
@@ -214,6 +231,20 @@ def test_list_feedback(client, png) -> None:
     assert len(body) == 2
     # Più recenti per primi (id desc)
     assert body[0]["rating"] == -1
+
+
+def test_positive_feedback_influences_future_rationale(client, png, stub_weather) -> None:
+    stub_weather()
+    top = _create(client, png, "Camicia preferita", "camicia", "bianco")
+    bottom = _create(client, png, "Jeans preferiti", "jeans", "blu")
+    client.post(
+        "/api/v1/outfits/feedback",
+        json={"item_ids": [top["id"], bottom["id"]], "rating": 1},
+    )
+
+    response = client.get("/api/v1/outfits/suggest?count=1")
+    assert response.status_code == 200
+    assert "preferenze" in response.json()["outfits"][0]["rationale"]
 
 
 def test_suggest_weather_fallback_when_api_fails(client, png, monkeypatch) -> None:

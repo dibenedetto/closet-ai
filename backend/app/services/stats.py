@@ -69,12 +69,17 @@ def compute_wardrobe_stats(
     total_items: int = db.execute(
         select(func.count(Item.id)).where(Item.retired_at.is_(None))
     ).scalar_one() or 0
-    total_wears: int = db.execute(select(func.count(WearEvent.id))).scalar_one() or 0
+    total_wears: int = db.execute(
+        select(func.count(WearEvent.id))
+        .join(Item, Item.id == WearEvent.item_id)
+        .where(Item.retired_at.is_(None))
+    ).scalar_one() or 0
     avg_wears_per_item = (total_wears / total_items) if total_items > 0 else 0.0
 
     # Investimento totale (somma price escludendo None)
     total_investment: float | None = db.execute(
         select(func.coalesce(func.sum(Item.price), 0.0))
+        .where(Item.retired_at.is_(None))
     ).scalar_one()
     if total_investment == 0.0:
         total_investment = None
@@ -88,7 +93,7 @@ def compute_wardrobe_stats(
             func.count(WearEvent.id).label("wears"),
         )
         .join(WearEvent, WearEvent.item_id == Item.id)
-        .where(Item.price.is_not(None))
+        .where(Item.price.is_not(None), Item.retired_at.is_(None))
         .group_by(Item.id, Item.price)
     ).subquery()
     cpw_rows = db.execute(select(cpw_subq.c.price, cpw_subq.c.wears)).all()
@@ -101,6 +106,7 @@ def compute_wardrobe_stats(
     top_rows = db.execute(
         select(Item.id, Item.name, func.count(WearEvent.id).label("wears"))
         .join(WearEvent, WearEvent.item_id == Item.id)
+        .where(Item.retired_at.is_(None))
         .group_by(Item.id, Item.name)
         .order_by(func.count(WearEvent.id).desc())
         .limit(top_n)

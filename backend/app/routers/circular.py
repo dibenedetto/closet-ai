@@ -107,6 +107,14 @@ def register_action(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"action_type non valido: {payload.action_type!r}",
         )
+    if item.retired_at is not None and circular_service.is_retiring(payload.action_type):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Item {item_id} già in seconda vita: "
+                "rimuovi l'azione di ritiro prima di registrarne un'altra."
+            ),
+        )
 
     co2 = (
         payload.co2_saved_kg

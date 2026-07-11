@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { getTryOnStatus, runTryOn, tryOnImageUrl, type TryOnOut, type TryOnStatus } from '../api/ai'
+import { errorMessage } from '../api/client'
 import { itemImageUrl, type Item } from '../api/items'
 
 export default function TryOnPanel({ item }: { item: Item }) {
@@ -38,7 +39,7 @@ export default function TryOnPanel({ item }: { item: Item }) {
     try {
       setResult(await runTryOn(item.id, portrait))
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -55,7 +56,9 @@ export default function TryOnPanel({ item }: { item: Item }) {
       </p>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+        <label htmlFor={`tryon-photo-${item.id}`} className="sr-only">Il tuo ritratto per il try-on</label>
         <input
+          id={`tryon-photo-${item.id}`}
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"

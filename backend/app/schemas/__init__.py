@@ -9,7 +9,7 @@ from app.schemas.circular import (
     ItemActionCreate,
     ItemActionRead,
 )
-from app.schemas.item import ItemRead
+from app.schemas.item import ItemRead, ItemUpdate
 from app.schemas.outfit import (
     OutfitFeedbackCreate,
     OutfitFeedbackRead,
@@ -45,6 +45,7 @@ __all__ = [
     "ItemActionRead",
     "ItemDescriptionOut",
     "ItemRead",
+    "ItemUpdate",
     "ItemStats",
     "OutfitFeedbackCreate",
     "OutfitFeedbackRead",
