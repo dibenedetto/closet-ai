@@ -1,4 +1,9 @@
-"""Genera la presentazione PowerPoint di ClosetAI.
+"""Generatore storico della presentazione pre-esame di ClosetAI.
+
+.. warning::
+   Non usare questo output per l'esame ufficiale. Il deliverable aggiornato è
+   ``docs/ClosetAI-esame-ufficiale.pptx``; questo script resta solo per
+   riprodurre l'archivio ``docs/presentation.pptx``.
 
 Output: ``docs/presentation.pptx`` (~16 slide per ~10-12 min, italiano).
 

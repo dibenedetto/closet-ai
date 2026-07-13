@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date as date_type, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,7 +36,7 @@ class OutfitSuggestResponse(BaseModel):
 
 class OutfitFeedbackCreate(BaseModel):
     item_ids: list[int] = Field(..., min_length=1, max_length=10)
-    rating: int = Field(..., ge=-1, le=1)
+    rating: Literal[-1, 1]
     occasion: str | None = Field(default=None, max_length=64)
 
 

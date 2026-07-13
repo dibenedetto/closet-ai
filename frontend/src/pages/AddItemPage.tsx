@@ -135,7 +135,7 @@ export default function AddItemPage() {
 
           <div className="analysis-note">
             <Icon name="wand" size={19} />
-            <p><strong>Analisi automatica inclusa</strong>Categoria, colore e stato iniziale vengono stimati dalla foto quando salvi.</p>
+            <p><strong>Analisi automatica inclusa</strong>Categoria e colore vengono stimati dalla foto quando salvi. Lo stato del capo si diagnostica dal dettaglio.</p>
           </div>
         </section>
 

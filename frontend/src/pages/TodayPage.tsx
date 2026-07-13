@@ -97,7 +97,7 @@ function OutfitCard({
           </div>
           {outfit.ghost_bonus > 0 && (
             <div className="score-row">
-              <span>Riscoperta</span>
+              <span>Anti-fantasma</span>
               <span className="score-track"><span className="score-fill" style={{ width: `${Math.round(outfit.ghost_bonus * 100 / .15)}%`, background: 'var(--sun)' }} /></span>
               <span>+{Math.round(outfit.ghost_bonus * 100)}%</span>
             </div>

@@ -38,7 +38,8 @@
 
 ## Scaletta (8-10 minuti)
 
-> **Filo narrativo** — la presentazione (`docs/presentation.pptx`) racconta
+> **Filo narrativo** — la presentazione ufficiale
+> (`docs/ClosetAI-esame-ufficiale.pptx`) racconta
 > il **ciclo di vita di un capo** in 6 tappe, ognuna con doppia lente
 > 👤 utente / ⚙️ tecnico. La demo live segue le stesse tappe: mostra la
 > slide, poi fai l'azione corrispondente nell'app.
@@ -135,9 +136,9 @@
 ### 8. Chiusura (30s)
 
 - Riassumi: due ruoli AI:
-  - **Machine learning applicato**: Fashion-CLIP (classificazione +
-    embedding), regole color+meteo per il recommender, euristica
-    diagnosi.
+  - **Machine learning applicato**: Fashion-CLIP pre-addestrato
+    (classificazione + embedding), MLP dello stato e MLP dei gap addestrati da
+    noi; regole color+meteo+feedback per il recommender.
   - **AI generativa**: descrizioni capi, coach sostenibilità, try-on
     virtuale, supporto AI in fase di design UI.
 - Sostenibilità "misurabile" — ogni feature popola una metrica concreta.

@@ -262,6 +262,10 @@ frontend/.vite/
 frontend/coverage/
 .vite/
 
+# Scratch di rendering/QA generato dagli strumenti di presentazione.
+# Il deliverable finale viene copiato in docs/.
+outputs/
+
 # Variabili ambiente locali
 .env.local
 .env.*.local

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 
 def _create(client, png, **extra):
     data = {"name": extra.pop("name", "X"), **{k: str(v) for k, v in extra.items()}}
@@ -95,6 +97,18 @@ def test_gap_endpoint_detects_gaps_on_unbalanced(client, png) -> None:
     assert "poca_varieta_colori" in codes
     # ogni vuoto ha un consiglio testuale
     assert all(g["advice"] for g in body["gaps"])
+
+
+def test_gap_ghost_ratio_counts_only_items_owned_for_30_days(client, png) -> None:
+    old = (date.today() - timedelta(days=45)).isoformat()
+    recent = (date.today() - timedelta(days=5)).isoformat()
+    _create(client, png, name="vecchio", category="camicia", purchase_date=old)
+    _create(client, png, name="recente", category="jeans", purchase_date=recent)
+
+    body = client.get("/api/v1/stats/gap-analysis").json()
+
+    assert body["total_items"] == 2
+    assert body["ghost_ratio"] == 0.5
 
 
 def test_gap_endpoint_excludes_retired_items(client, png) -> None:

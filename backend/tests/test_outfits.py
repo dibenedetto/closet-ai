@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -49,6 +49,18 @@ def test_unknown_color_neutral_score() -> None:
 def test_palette_compat_with_single_color() -> None:
     # palette di 1 colore: nessuna coppia → score di default
     assert palette_compat_score(["blu"]) == 0.5
+
+
+def test_ghost_bonus_requires_30_days_of_ownership() -> None:
+    from app.models import Item
+    from app.services.recommender import _ghost_bonus
+
+    old = Item(id=1, name="Vecchio", purchase_date=date.today() - timedelta(days=45))
+    recent = Item(id=2, name="Recente", purchase_date=date.today() - timedelta(days=5))
+
+    assert _ghost_bonus([recent], {}) == 0.0
+    assert _ghost_bonus([old], {}) == 0.08
+    assert _ghost_bonus([old], {old.id: 1}) == 0.0
 
 
 # ----- suggest endpoint ------------------------------------------------------

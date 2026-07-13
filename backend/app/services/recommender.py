@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Item, OutfitFeedback, WearEvent
 from app.services.color_compat import palette_compat_score
+from app.services.ghosts import DEFAULT_GHOST_AFTER_DAYS, is_ghost_eligible
 from app.services.weather import WeatherInfo
 
 ROLES_BY_CATEGORY: dict[str, str] = {
@@ -140,12 +141,19 @@ def _feedback_affinity_map(db: Session) -> dict[int, float]:
 
 
 def _ghost_bonus(items: list[Item], wear_counts: dict[int, int]) -> float:
-    """Bonus se include capi mai/poco indossati (riequilibrio guardaroba)."""
-    unused = [it for it in items if wear_counts.get(it.id, 0) == 0]
-    if not unused:
+    """Bonus per capi mai indossati e posseduti da almeno 30 giorni."""
+    ghosts = [
+        item
+        for item in items
+        if wear_counts.get(item.id, 0) == 0
+        and is_ghost_eligible(
+            item, ghost_after_days=DEFAULT_GHOST_AFTER_DAYS
+        )
+    ]
+    if not ghosts:
         return 0.0
     # Fino a +0.15 se l'outfit include 2+ capi fantasma
-    return min(0.15, 0.08 * len(unused))
+    return min(0.15, 0.08 * len(ghosts))
 
 
 def _build_candidates(
@@ -223,7 +231,10 @@ def _score(
     rationale_parts = [f"colori: {palette_str}"]
     rationale_parts.extend(weather_reasons)
     if ghost_bonus > 0:
-        rationale_parts.append("contiene capi mai indossati")
+        rationale_parts.append(
+            "contiene capi fantasma: mai indossati da almeno "
+            f"{DEFAULT_GHOST_AFTER_DAYS} giorni"
+        )
     if preference_bonus > 0.005:
         rationale_parts.append("in linea con le tue preferenze")
     rationale = "; ".join(rationale_parts)

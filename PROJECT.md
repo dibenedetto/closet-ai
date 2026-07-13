@@ -83,12 +83,13 @@ dell'AI, soddisfacendo i requisiti didattici del corso.
   (`fashion-clip`, `valhalla/fashion-clip`, ecc.) per dedurre categoria,
   attributi e generare embedding.
 - **Estrazione colore dominante** — k-means su pixel o palette estraction.
-- **Outfit recommender** — regole di compatibilità cromatica + similarità su
-  embedding per garantire varietà.
-- **Diagnosi difetti** — vision classifier su poche classi (nuovo, buono,
-  usurato, danneggiato).
-- **Detection automatica outfit** — multi-label detection da foto, per il
-  wear log automatico.
+- **Outfit recommender** — ranking esplicito basato su compatibilità cromatica,
+  meteo, riscoperta dei ghost garment e feedback utente; non è un modello
+  addestrato e il ranking corrente non usa embedding.
+- **Diagnosi difetti** — testa MLP addestrata da noi su tre classi (buono,
+  usurato, danneggiato) a partire da embedding Fashion-CLIP congelati.
+- **Detection automatica outfit** — estensione futura multi-label da foto per
+  il wear log automatico; non è implementata nel prototipo corrente.
 
 ### 4.2 AI generativa (supporto al design e all'esperienza)
 
@@ -229,7 +230,7 @@ Ogni modulo può essere assegnato a un sottogruppo di lavoro.
 | -- | --------------------------------------- | -------------------------------------------- |
 | M1 | Catalogazione capi (vision)             | CLIP / fashion-classifier pre-trained        |
 | M2 | Wear log e cost-per-wear                | CRUD + analytics                             |
-| M3 | Outfit recommender                      | Regole + embedding + API meteo               |
+| M3 | Outfit recommender                      | Regole pesate + feedback + API meteo         |
 | M4 | Diagnosi e azioni circolari             | Vision classifier + tabella CO₂ + LLM        |
 | M5 | UI / Specchio fisico                    | React + Vite; RPi5 + camera (opz.)           |
 | M6 | Dashboard impatto                       | Aggregazione metriche + visualizzazioni      |

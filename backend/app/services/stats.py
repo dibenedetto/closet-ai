@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Item, ItemAction, WearEvent
 from app.services.circular import RETIRING_ACTIONS
-
-DEFAULT_GHOST_AFTER_DAYS = 30
+from app.services.ghosts import (
+    DEFAULT_GHOST_AFTER_DAYS,
+    ghost_reference_date,
+    is_ghost_eligible,
+)
 
 
 def _today() -> date:
@@ -37,7 +40,9 @@ def compute_item_stats(
     if item.price is not None and wear_count > 0:
         cost_per_wear = round(item.price / wear_count, 2)
 
-    is_ghost = wear_count == 0 and _ghost_eligible(item, today, ghost_after_days)
+    is_ghost = wear_count == 0 and is_ghost_eligible(
+        item, today=today, ghost_after_days=ghost_after_days
+    )
 
     return {
         "item_id": item.id,
@@ -48,18 +53,6 @@ def compute_item_stats(
         "is_ghost": is_ghost,
         "ghost_after_days": ghost_after_days,
     }
-
-
-def _ghost_eligible(item: Item, today: date, ghost_after_days: int) -> bool:
-    """Un capo è 'eligible' per lo stato fantasma se è stato posseduto da
-    almeno `ghost_after_days`. Per la determinazione preferiamo
-    `purchase_date`; fallback su `created_at` (data di registrazione)."""
-    reference: date | None = item.purchase_date
-    if reference is None:
-        reference = item.created_at.date() if item.created_at else None
-    if reference is None:
-        return False
-    return (today - reference).days >= ghost_after_days
 
 
 def compute_wardrobe_stats(
@@ -137,7 +130,6 @@ def list_ghost_items(
 ) -> list[dict]:
     """Lista i capi mai indossati e posseduti da almeno X giorni."""
     today = _today()
-    threshold = today - timedelta(days=ghost_after_days)
 
     # Capi senza wear events, non ritirati (LEFT OUTER JOIN + filter)
     rows = (
@@ -153,9 +145,12 @@ def list_ghost_items(
 
     out: list[dict] = []
     for item in rows:
-        ref = item.purchase_date or (item.created_at.date() if item.created_at else None)
-        if ref is None or ref > threshold:
+        if not is_ghost_eligible(
+            item, today=today, ghost_after_days=ghost_after_days
+        ):
             continue
+        ref = ghost_reference_date(item)
+        assert ref is not None  # garantito da is_ghost_eligible
         out.append(
             {
                 "item_id": item.id,
@@ -171,21 +166,22 @@ def list_ghost_items(
 
 def _count_ghosts(db: Session, ghost_after_days: int) -> int:
     today = _today()
-    threshold = today - timedelta(days=ghost_after_days)
     rows = (
         db.execute(
-            select(Item.purchase_date, Item.created_at)
+            select(Item)
             .outerjoin(WearEvent, WearEvent.item_id == Item.id)
             .where(WearEvent.id.is_(None), Item.retired_at.is_(None))
         )
+        .scalars()
         .all()
     )
-    count = 0
-    for purchase_date, created_at in rows:
-        ref = purchase_date or (created_at.date() if created_at else None)
-        if ref is not None and ref <= threshold:
-            count += 1
-    return count
+    return sum(
+        1
+        for item in rows
+        if is_ghost_eligible(
+            item, today=today, ghost_after_days=ghost_after_days
+        )
+    )
 
 
 def compute_impact_stats(db: Session) -> dict:

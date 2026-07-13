@@ -155,7 +155,7 @@ export default function ItemDetailPage() {
           <div className="detail-category">{[item.category, item.color].filter(Boolean).join(' · ') || 'Da classificare'}</div>
           <div className="detail-badges">
             <StatusBadge condition={item.condition} />
-            {stats?.is_ghost && !item.retired_at && <span className="ghost-badge">Poco utilizzato</span>}
+            {stats?.is_ghost && !item.retired_at && <span className="ghost-badge">Fantasma · mai indossato da {stats.ghost_after_days}+ giorni</span>}
             {item.retired_at && <span className="retired-badge">In seconda vita dal {fmtDate(item.retired_at)}</span>}
           </div>
 

@@ -23,6 +23,7 @@ from app.ml.gap_model import (
     rule_based_gaps,
 )
 from app.models import Item, WearEvent
+from app.services.ghosts import DEFAULT_GHOST_AFTER_DAYS, is_ghost_eligible
 
 log = logging.getLogger(__name__)
 
@@ -81,19 +82,23 @@ def _collect_features(db: Session) -> tuple[dict[str, int], int, bool, float]:
     n_colors = len(colors)
     has_neutral = bool(colors & NEUTRALS)
 
-    # Ghost ratio: capi attivi senza alcun wear event / totale attivi.
-    total_active = db.execute(
-        select(func.count(Item.id)).where(Item.retired_at.is_(None))
-    ).scalar_one() or 0
+    # Ghost ratio: capi attivi mai indossati e posseduti da almeno 30 giorni,
+    # secondo la stessa regola usata da statistiche e recommender.
+    active_items = list(
+        db.execute(select(Item).where(Item.retired_at.is_(None))).scalars()
+    )
+    total_active = len(active_items)
     worn_ids = db.execute(
         select(WearEvent.item_id).distinct()
     ).scalars().all()
     worn = set(worn_ids)
-    active_ids = db.execute(
-        select(Item.id).where(Item.retired_at.is_(None))
-    ).scalars().all()
-    never_worn = sum(1 for i in active_ids if i not in worn)
-    ghost_ratio = (never_worn / total_active) if total_active else 0.0
+    ghost_count = sum(
+        1
+        for item in active_items
+        if item.id not in worn
+        and is_ghost_eligible(item, ghost_after_days=DEFAULT_GHOST_AFTER_DAYS)
+    )
+    ghost_ratio = (ghost_count / total_active) if total_active else 0.0
 
     return counts, n_colors, has_neutral, ghost_ratio
 

@@ -54,7 +54,7 @@ mock con un modello pre-trained reale. Le opzioni considerate:
 
 | Opzione                                       | Pro                                                              | Contro                                                              |
 | --------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Fashion-CLIP** (`patrickjohncyh/fashion-clip`) | CLIP fine-tunato su 700K immagini fashion. Zero-shot su categorie italiane. Embedding 512d riusabili per recommender (Fase 4). | ~600 MB di pesi al primo run.                                       |
+| **Fashion-CLIP** (`patrickjohncyh/fashion-clip`) | CLIP fine-tunato su oltre 800K prodotti fashion (model card). Zero-shot con prompt inglesi e label restituite in italiano. Embedding 512d usati dalla testa dello stato; non entrano nel ranking outfit corrente. | ~600 MB di pesi al primo run.                                       |
 | CLIP standard (`openai/clip-vit-base-patch32`) | Più piccolo (~150 MB), interfaccia identica.                     | Meno preciso sui capi (training generalista).                       |
 | Classifier diretto (es. ViT su Fashionpedia) | Più piccolo, output diretto (no prompt eng.).                    | Niente embedding. Categoria fissa. Si riaddestra per cambiare lista.|
 | Servizio cloud (Replicate / HF Inference API)   | Niente pesi locali.                                              | Privacy: immagini lasciano la macchina. Costo. Latenza variabile.   |

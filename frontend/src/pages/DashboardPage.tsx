@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
       <div className="toolbar" style={{ marginTop: 14 }}>
         <div className="notice" style={{ margin: 0 }}>
-          <Icon name="clock" size={16} /> Un “capo fantasma” non viene usato da almeno
+          <Icon name="clock" size={16} /> Un “capo fantasma” non è mai stato indossato ed è posseduto da almeno
           <label style={{ margin: 0 }}>
             <span className="sr-only">Soglia giorni per capo fantasma</span>
             <select value={ghostDays} onChange={(event) => setGhostDays(Number(event.target.value))} style={{ width: 88, minHeight: 36, paddingBlock: 5 }}>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
         <MetricCard label="Capi attivi" value={String(stats.total_items)} sub={`${items.length - activeItems.length} in seconda vita`} />
         <MetricCard label="Utilizzi registrati" value={String(stats.total_wears)} sub={`media ${stats.avg_wears_per_item.toFixed(1)} per capo`} />
         <MetricCard label="Cost-per-wear medio" value={stats.avg_cost_per_wear != null ? `€ ${stats.avg_cost_per_wear.toFixed(2)}` : '—'} sub="sui capi con prezzo e utilizzi" />
-        <MetricCard label="Capi da riscoprire" value={String(stats.ghost_count)} sub={`inattivi da più di ${stats.ghost_after_days} giorni`} />
+        <MetricCard label="Capi fantasma" value={String(stats.ghost_count)} sub={`mai indossati dopo almeno ${stats.ghost_after_days} giorni di possesso`} />
       </div>
 
       <CoachCard llmConfigured={llmStatus?.configured ?? false} ghostAfterDays={ghostDays} />
@@ -262,7 +262,7 @@ export default function DashboardPage() {
                 <li key={item.item_id}>
                   <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
                   <Link to={`/items/${item.item_id}`}>{item.name}</Link>
-                  <span className="rank-value">{item.days_owned ?? '?'}g</span>
+                  <span className="rank-value">Mai usato · {item.days_owned ?? '?'}g</span>
                 </li>
               ))}
             </ol>

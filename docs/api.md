@@ -421,9 +421,13 @@ dal meteo recuperato via Open-Meteo (con fallback se l'API non risponde).
 }
 ```
 
-Lo score è `0.55 * color_score + 0.35 * weather_score + ghost_bonus`,
-clamped a `[0, 1]`. Se Open-Meteo non risponde, `weather.source = "fallback"`
-e i valori sono valori "miti" (~18°C, no pioggia).
+Lo score è
+`0.55 * color_score + 0.35 * weather_score + ghost_bonus + preference_bonus`,
+clamped a `[0, 1]`. `ghost_bonus` arriva a `0.15` e considera solo capi mai
+indossati posseduti da almeno 30 giorni; `preference_bonus` vale
+`0.04 * affinità_feedback_media` (quindi circa `-0.04..+0.04`). Se Open-Meteo
+non risponde, `weather.source = "fallback"` e i valori sono valori "miti"
+(~18°C, no pioggia).
 
 **Esempio**
 
@@ -435,7 +439,8 @@ curl -s "http://localhost:8000/api/v1/outfits/suggest?count=3&date=2026-05-22" |
 
 ### `POST /outfits/feedback`
 
-Salva un like/dislike su una proposta di outfit (per analisi future).
+Salva un like/dislike su una proposta di outfit. Il segnale entra con peso
+leggero nel ranking delle proposte successive; non riaddestra un modello.
 
 **Body**:
 

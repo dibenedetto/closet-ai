@@ -122,27 +122,26 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
   (vedi [docs/api.md](docs/api.md)).
 - **Frontend** — `VITE_API_BASE_URL` (vedi [frontend/.env.example](frontend/.env.example)).
 
-## Presentazione e notebook ML
+## Materiali per l’esame ufficiale
 
-Per la consegna del corso (audience: design):
+- **Presentazione**: [docs/ClosetAI-esame-ufficiale.pptx](docs/ClosetAI-esame-ufficiale.pptx) —
+  16 slide in italiano, con commento orale incorporato in ogni slide. Distingue
+  esplicitamente modelli nostri, pre-addestrati, generativi e regole.
+- **Guida orale**: [docs/exam-oral-guide.md](docs/exam-oral-guide.md) — risposte
+  sui capi fantasma, numeri difendibili, domande probabili e roadmap mobile.
+- **Notebook ML**: [ml/notebooks/exam/](ml/notebooks/exam/) — cinque notebook
+  autosufficienti ed eseguiti: due modelli caricati dal prodotto e tre
+  esperimenti accademici chiaramente separati.
 
-- **Presentazione**: [docs/presentation.pptx](docs/presentation.pptx) —
-  14 slide divulgative in italiano (~10 min). Allineata ai 4 blocchi
-  richiesti: problem setting, workflow IA generativa, strumento ML,
-  analisi di sostenibilità + studio di fattibilità.
-- **Notebook ML**: [ml/notebooks/closetai_ml.ipynb](ml/notebooks/closetai_ml.ipynb) —
-  tre modelli scikit-learn addestrati su dati sintetici realistici
-  (classificazione ghost-predictor, regressione wear-forecast, clustering
-  stili). Soddisfa il requisito "INTEGRAZIONE OBBLIGATORIA" del corso.
-
-Per rigenerare:
+Per rigenerare la struttura dei notebook:
 
 ```bash
 cd backend
-uv run python scripts/generate_presentation.py        # .pptx
-uv run python scripts/build_ml_notebook.py            # struttura .ipynb
-uv run jupyter nbconvert --to notebook --execute --inplace ../ml/notebooks/closetai_ml.ipynb
+uv run python scripts/build_exam_notebooks.py
 ```
+
+I file storici `docs/presentation.pptx` e `ml/notebooks/closetai_ml.ipynb`
+restano come archivio pre-esame e non sono i materiali da proiettare.
 
 ## Modello di diagnosi stato (rete addestrata da noi)
 
