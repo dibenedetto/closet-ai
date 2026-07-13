@@ -129,6 +129,11 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
   esplicitamente modelli nostri, pre-addestrati, generativi e regole.
 - **Guida orale**: [docs/exam-oral-guide.md](docs/exam-oral-guide.md) — risposte
   sui capi fantasma, numeri difendibili, domande probabili e roadmap mobile.
+- **Tutorial lato utente**: [docs/tutorial-utente.md](docs/tutorial-utente.md) —
+  manuale operativo e copione della demo con cosa mostrare, dire e verificare.
+- **Spiegazione tecnica ad alto livello**:
+  [docs/spiegazione-tecnica-alto-livello.md](docs/spiegazione-tecnica-alto-livello.md) —
+  architettura, flussi, modelli, regole, limiti e traccia orale per l'esame.
 - **Notebook ML**: [ml/notebooks/exam/](ml/notebooks/exam/) — cinque notebook
   autosufficienti ed eseguiti: due modelli caricati dal prodotto e tre
   esperimenti accademici chiaramente separati.

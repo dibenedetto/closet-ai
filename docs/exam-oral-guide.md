@@ -31,10 +31,10 @@ nell’app. Non è machine learning: è una regola verificabile.
 
 La UI li mostra in:
 
-- `/dashboard`: soglia 30/60/90/180 giorni, conteggio “Capi da riscoprire” e
-  lista nominativa;
-- `/items/:id`: badge “Poco utilizzato”;
-- `/today`: bonus “Riscoperta” negli outfit eleggibili.
+- `/dashboard`: soglia 30/60/90/180 giorni, metrica “Capi fantasma” e lista
+  nominativa “Capi da riscoprire”;
+- `/items/:id`: badge “Fantasma · mai indossato da 30+ giorni”;
+- `/today`: bonus “Anti-fantasma” negli outfit eleggibili.
 
 Formula corretta da usare: **“mai indossato dopo almeno X giorni”**. Non dire
 “non indossato di recente”: un capo indossato una volta anni fa non è ghost
