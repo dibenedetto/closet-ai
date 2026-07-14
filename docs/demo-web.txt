@@ -1,0 +1,166 @@
+Sì. Ti consiglio una demo di 6–7 minuti usando i dati già caricati, senza dipendere da upload o funzioni generative.
+
+Non posso vedere i tuoi clic in tempo reale, ma ho verificato adesso dati e servizi della web app.
+
+## Prima dell’esame
+
+Apri `http://localhost:5173` e controlla:
+
+- frontend e backend attivi;
+- immagini dei capi visibili;
+- pagina «Cosa metto?» funzionante;
+- nessun errore evidente nella pagina «Impatto»;
+- zoom del browser al 100%;
+- notifiche e finestre personali chiuse.
+
+Attualmente l’app contiene:
+
+- 12 capi attivi e 1 in seconda vita;
+- 146 utilizzi;
+- 2 capi fantasma;
+- 2 azioni circolari;
+- 57,5 kg CO₂eq stimati.
+
+Attenzione: nella PowerPoint sono indicati 148 utilizzi, mentre l’app ora ne mostra 146. Prima dell’esame conviene allineare i due valori.
+
+## Demo consigliata
+
+### 1. Guardaroba — 40 secondi
+
+Apri «Guardaroba».
+
+Mostra:
+
+- il titolo «Vesti meglio. Compra meno.»;
+- «Impatto verde»;
+- i segnali su uso, stato e gap;
+- la griglia dei capi.
+
+Cosa dire:
+
+> «ClosetAI è un guardaroba digitale che aiuta a usare meglio quello che possediamo già. Non è un negozio: registra l’uso reale, recupera i capi dimenticati e suggerisce quando curare, riutilizzare o acquistare soltanto se esiste un vero bisogno.»
+
+Non fermarti a spiegare tutti i numeri: qui devi presentare l’idea generale.
+
+### 2. Ricerca e dettaglio — 50 secondi
+
+Nella ricerca scrivi `Giacca denim` e apri il capo.
+
+Mostra:
+
+- fotografia e carta d’identità;
+- utilizzi e cost-per-wear;
+- stato «Da curare»;
+- possibilità di correggere i dati;
+- sezione «Cura e seconda vita».
+
+Cosa dire:
+
+> «Ogni capo diventa una scheda verificabile. L’AI può stimare alcune informazioni, ma l’utente vede la confidenza e può sempre correggere il risultato. Nel caso della giacca, lo stato suggerisce un’azione di cura, non una certificazione del tessuto.»
+
+Non modificare il capo durante la demo principale.
+
+### 3. Capi fantasma — 60 secondi
+
+Apri «Impatto» e raggiungi «Capi da riscoprire».
+
+Dovresti trovare:
+
+- «Vestito floreale estivo»;
+- «Sciarpa lana rossa».
+
+Mostra anche il selettore 30/60/90/180 giorni.
+
+Cosa dire:
+
+> «Un capo fantasma non è semplicemente poco utilizzato. Deve essere ancora attivo, avere zero utilizzi e risultare posseduto da almeno 30 giorni. È una regola deterministica, non una rete neurale.»
+
+Aggiungi:
+
+> «Il segnale appare nella pagina Impatto, nel dettaglio del capo e nelle proposte outfit come bonus anti-fantasma.»
+
+Non registrare ancora un utilizzo sui due ghost: altrimenti spariranno dalla lista.
+
+### 4. Cosa metto oggi? — 70 secondi
+
+Apri «Cosa metto?».
+
+Procedura:
+
+1. lascia Pisa oppure scegli un’altra città;
+2. seleziona 3 proposte;
+3. premi «Nuove proposte»;
+4. mostra punteggio, palette, meteo e anti-fantasma.
+
+Attualmente la prima proposta dovrebbe includere «Vestito floreale estivo» e «Scarpe sneakers bianche», con motivazione anti-fantasma.
+
+Cosa dire:
+
+> «Il sistema non genera vestiti nuovi: ricombina i capi presenti nel guardaroba. Il ranking considera colori, meteo, capi fantasma e un piccolo feedback dell’utente. Il punteggio serve a ordinare le proposte: non è una probabilità assoluta di gradimento.»
+
+Puoi mostrare il cuore e la X, ma non è necessario cliccarli.
+
+### 5. Gap del guardaroba — 50 secondi
+
+Torna su «Impatto» e mostra «Cosa manca davvero?».
+
+Attualmente il modello segnala:
+
+- «Poche scarpe per variare»;
+- sorgente: rete neurale;
+- probabilità intorno a `0,956`.
+
+Cosa dire:
+
+> «La gap analysis usa 14 segnali aggregati e può produrre sei tipi di indicazione. Non vuole necessariamente suggerire un acquisto: anche “nessun acquisto necessario” è un risultato corretto.»
+
+Precisazione utile:
+
+> «Il modello è stato addestrato su guardaroba simulati, quindi il risultato è un consiglio da verificare, non una necessità oggettiva.»
+
+### 6. Stato e azioni circolari — 50 secondi
+
+Sempre nella pagina «Impatto», mostra:
+
+- «Cosa richiede cura?»;
+- riparazioni e azioni di seconda vita;
+- 57,5 kg CO₂eq stimati.
+
+Cosa dire:
+
+> «Lo stato del capo conduce a un gesto: continuare a usarlo, ripararlo, donarlo, venderlo o riciclarlo. L’impatto verde è una stima di scenario basata sulla categoria e sull’azione: non è una misurazione fisica e non è una LCA completa.»
+
+Il «Cappotto lana cammello» è già in seconda vita e la «Giacca denim» ha già una riparazione registrata: sono esempi pronti da mostrare senza modificare i dati.
+
+### 7. Chiusura — 30 secondi
+
+Torna alla home.
+
+Cosa dire:
+
+> «Il percorso completo è: fotografare, utilizzare, riscoprire, curare e decidere. Abbiamo usato l’AI quando serve a ridurre un’incertezza, come stato e gap; abbiamo mantenuto trasparenti ghost, cost-per-wear, outfit e impatto.»
+
+## Se il professore chiede cosa avete allenato
+
+Apri «ML Lab» solo a questo punto.
+
+Dì:
+
+- Fashion-CLIP è pre-addestrato e congelato;
+- avete addestrato la MLP per lo stato del capo;
+- avete addestrato la MLP per i gap;
+- ghost, outfit, cost-per-wear e impatto sono regole;
+- LLM e try-on sono generativi esterni e attualmente disabilitati.
+
+I due modelli runtime risultano disponibili. LLM e try-on, invece, non sono configurati: non basare la demo su queste funzioni.
+
+## Cosa evitare durante l’esame
+
+- Non aggiungere una nuova fotografia: introduce tempi e risultati imprevedibili.
+- Non usare try-on o descrizioni generative.
+- Non eliminare capi o azioni.
+- Non registrare un utilizzo su un ghost prima di averlo mostrato.
+- Non presentare CO₂eq come dato misurato.
+- Non chiamare “AI” tutte le funzionalità.
+
+La guida completa è disponibile in [tutorial-utente.md](C:/devel/closet-ai/docs/tutorial-utente.md).
