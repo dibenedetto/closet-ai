@@ -121,9 +121,8 @@ stessa macchina del backend FastAPI, con PyTorch CPU.
 
 - **Export ONNX** + runtime browser-side (Transformers.js / ORT-Web) →
   inference nel browser dell'utente, zero immagini sul server.
-- **Specchio (RPi5)**: CoreML / TFLite tramite delegato hardware.
 
-In entrambi i casi l'interfaccia `Classifier` resta invariata: cambia solo
+In questo caso l'interfaccia `Classifier` resta invariata: cambia solo
 l'implementazione del singleton sotto `app/ml/classifier.py`.
 
 ---
@@ -248,7 +247,7 @@ hardcoded, 503 al client).
 
 ---
 
-## ADR-009 — Diagnosi stato di conservazione: rete addestrata da noi
+## Diagnosi dello stato di conservazione: rete addestrata da noi
 
 **Contesto**: la Fase 5 diagnosticava lo stato del capo (buono/
 usurato/danneggiato) con un'**euristica** su `wear_count` + età. Non guarda
@@ -257,7 +256,7 @@ stesso giudizio, anche se uno è strappato e l'altro intatto. Il requisito
 (corso + utente) è una **rete neurale addestrata da noi** che predica lo
 stato **dalla foto**.
 
-**Decisione**: **Approccio A — testa MLP su embedding Fashion-CLIP**.
+**Decisione**: usare una **testa MLP su embedding Fashion-CLIP**.
 
 ```
 foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (3 classi)
@@ -275,9 +274,8 @@ vedi sotto e la datasheet).
 - Riusa l'infrastruttura Fashion-CLIP già presente (un solo modello pesante
   caricato in RAM, non due).
 - Dataset più semplice da etichettare: serve solo (foto, stato), non testo.
-- Un Approccio C (VLM+LoRA per stato+tutorial) è stato prototipato e poi
-  **rimosso** insieme alla feature "tutorial di riparazione": vedi
-  ADR-010 (superata).
+- Un modello VLM con LoRA per stato e tutorial è stato prototipato e poi
+  **rimosso** insieme alla funzione "tutorial di riparazione".
 
 **Dataset**: non esiste un dataset pubblico per lo stato di usura. Lo
 generiamo con **degradazione sintetica controllata**, oppure — modalità
@@ -305,9 +303,9 @@ leggibile; altrimenti ricade sull'euristica. Il campo `source`
 
 ---
 
-## ADR-010 — Diagnosi stato, Approccio C: VLM + LoRA (superata, rimossa)
+## Prototipo VLM + LoRA per la diagnosi (superato e rimosso)
 
-**Contesto originale**: l'Approccio A (ADR-009) predice solo lo **stato**
+**Contesto originale**: la MLP su embedding Fashion-CLIP predice solo lo **stato**
 con un MLP su embedding CLIP. Per generare anche un **tutorial di
 riparazione** personalizzato, era stato prototipato un secondo approccio:
 un **unico modello vision-generativo** (fine-tuning LoRA di
@@ -409,7 +407,7 @@ backend/app/
 backend/app/ml/
     ├── classifier.py       # Fashion-CLIP (+ embed_image come feature extractor)
     ├── color.py
-    ├── condition_model.py  # Approccio A: MLP addestrato da noi (testa su CLIP)
+    ├── condition_model.py  # MLP addestrato da noi (testa su CLIP)
     └── gap_model.py        # gap analysis: MLP multi-label su feature tabellari
 
 backend/app/services/
@@ -418,7 +416,7 @@ backend/app/services/
 backend/scripts/
     ├── build_condition_dataset.py    # genera il dataset (degradazione sintetica / COCO reale)
     ├── fetch_real_garments.py        # scarica capi reali (FashionMNIST)
-    ├── train_condition_model.py      # Approccio A: MLP su embedding CLIP
+    ├── train_condition_model.py      # MLP su embedding CLIP
     ├── build_wardrobe_dataset.py     # genera il dataset tabellare guardaroba
     └── train_gap_model.py            # addestra l'MLP multi-label di gap analysis
 ```
@@ -449,7 +447,7 @@ class ClassificationResult:
 | `CLOSETAI_LLM_MAX_TOKENS`       | `800`                                | runtime   | tetto generazione.                                         |
 | `CLOSETAI_LLM_CACHE_TTL_HOURS`  | `24`                                 | runtime   | TTL della tabella `llm_cache`.                             |
 | `CLOSETAI_CONDITION_BACKEND`    | `auto`                               | runtime   | `auto`/`clip-mlp`/`heuristic` — routing diagnosi stato.    |
-| `CLOSETAI_CONDITION_WEIGHTS`    | `ml/weights/condition_head.pt`       | runtime   | pesi MLP (Approccio A).                                    |
+| `CLOSETAI_CONDITION_WEIGHTS`    | `ml/weights/condition_head.pt`       | runtime   | pesi della MLP per lo stato.                               |
 | `CLOSETAI_TRYON_BACKEND`        | `disabled`                           | runtime   | `diffusers` per try-on locale.                             |
 | `CLOSETAI_TRYON_MODEL`          | `stabilityai/stable-diffusion-2-inpainting` | runtime | HF model id per try-on.                            |
 | `CLOSETAI_TRYON_DIR`            | `<DATA_DIR>/tryon`                   | runtime   | output try-on.                                             |

@@ -272,7 +272,7 @@ Lista cronologica (desc) degli eventi di utilizzo per il capo.
 ### `POST /wear-events/batch`
 
 Registra più eventi in una transazione singola. Utile per inserimenti
-massivi dall'app mobile o da uno specchio smart.
+massivi dall'app mobile o da altre interfacce autorizzate.
 
 **Body**:
 
@@ -469,7 +469,7 @@ Lista cronologica (desc) dei feedback salvati. Query: `limit` (1–200, default 
 
 ### `POST /items/{item_id}/diagnose`
 
-Diagnostica la condizione del capo (`buono`/`usurato`/`danneggiato` — "nuovo" è stato fuso in "buono", vedi ADR-009).
+Diagnostica la condizione del capo (`buono`/`usurato`/`danneggiato`; "nuovo" è stato fuso in "buono").
 Usa il backend configurato da `CLOSETAI_CONDITION_BACKEND` (default `auto`:
 prova l'MLP su Fashion-CLIP, poi l'euristica `wear_count` + età). Il campo
 `source` indica quale backend ha risposto. Se l'item non aveva ancora una
@@ -706,12 +706,11 @@ del training.
   "models": [
     {
       "key": "condition-mlp",
-      "name": "Rete stato del capo (Approccio A)",
+      "name": "Rete per lo stato del capo",
       "nature": "own",
       "available": true,
-      "architecture": "Fashion-CLIP (frozen) → MLP 512→256→128→3",
-      "metrics": { "val_accuracy": 0.960, "test_accuracy": 0.940 },
-      "train_command": "uv run python scripts/train_condition_model.py"
+      "architecture": "Fashion-CLIP pre-addestrato → rete neurale a 3 classi",
+      "metrics": { "val_accuracy": 0.960, "test_accuracy": 0.940 }
     }
   ],
   "datasets": [

@@ -59,7 +59,7 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
   del corso "INTEGRAZIONE OBBLIGATORIA — Classificazione, Regressione,
   Clustering". Riproducibile via
   `backend/scripts/build_ml_notebook.py` + `jupyter nbconvert --execute`.
-- **Diagnosi stato — rete addestrata da noi** (Fase 7, Approccio A):
+- **Diagnosi stato — rete addestrata da noi**:
   - Dataset: [`build_condition_dataset.py`](../backend/scripts/build_condition_dataset.py)
     via degradazione sintetica (datasheet in
     [dataset-datasheet.md](dataset-datasheet.md)).
@@ -67,7 +67,7 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
     ([`app/ml/condition_model.py`](../backend/app/ml/condition_model.py)),
     addestrato con
     [`train_condition_model.py`](../backend/scripts/train_condition_model.py).
-    **Test accuracy ~0.94** sul sintetico (vedi ADR-009 per il caveat domain
+    **Test accuracy ~0.94** sul sintetico (con il caveat del domain
     gap). Pesi in `ml/weights/condition_head.pt` (gitignored, rigenerabili).
   - Integrazione: `services/condition.py` usa il modello se disponibile,
     altrimenti euristica; espone `source`/`confidence`.
@@ -98,8 +98,8 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
 ### Frontend (React 19 + Vite 7 + TypeScript)
 
-- 7 pagine: `/` (guardaroba con story strip a 6 tappe), `/items/new`,
-  `/items/:id`, `/today`, `/dashboard`, `/lab` (ML Lab tecnica), `/mirror`.
+- 6 pagine: `/` (guardaroba con story strip a 6 tappe), `/items/new`,
+  `/items/:id`, `/today`, `/dashboard`, `/lab` (ML Lab tecnica).
 - Logo temporaneo SVG inline (`components/Logo.tsx`) + favicon data-URL —
   **placeholder da sostituire** col design definitivo.
 - API client tipizzato in `src/api/` (5 file).
@@ -131,7 +131,6 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 - [CLAUDE.md](../CLAUDE.md) — convenzioni e istruzioni AI.
 - [docs/api.md](api.md) — riferimento API completo.
 - [docs/architecture.md](architecture.md) — 7 ADR motivate.
-- [docs/raspberry-pi.md](raspberry-pi.md) — setup hardware specchio.
 - [docs/demo-script.md](demo-script.md) — scaletta operativa demo finale.
 - [docs/screenshots/README.md](screenshots/README.md) — come catturare gli
   screenshot (manuale).
@@ -141,8 +140,8 @@ Riferimento completo con payload di esempio: [docs/api.md](api.md).
 
 ### Tooling
 
-- Setup cross-platform: `scripts/setup.{sh,ps1,bat}`,
-  `scripts/run-{backend,frontend}.{sh,ps1,bat}`, `scripts/start-mirror.sh`.
+- Setup cross-platform: `scripts/setup.{sh,ps1,bat}` e
+  `scripts/run-{backend,frontend}.{sh,ps1,bat}`.
 - Seed data demo: `backend/scripts/seed_demo.py`.
 - Benchmark classifier: `backend/scripts/benchmark_classifier.py`.
 - VS Code launch profiles + settings (`.vscode/`).
@@ -155,15 +154,13 @@ Funzionalità predisposte ma non al 100% per la produzione reale:
 
 1. **Screenshot UI in README** — `docs/screenshots/` ha le istruzioni; i
    PNG vanno catturati a mano una volta avviato il sistema.
-2. **Specchio Raspberry Pi** — la pagina `/mirror` funziona, lo script
-   kiosk c'è, ma non è stato validato su hardware fisico.
-3. **Try-on garment-aware (IDM-VTON)** — l'attuale backend usa Stable
+2. **Try-on garment-aware (IDM-VTON)** — l'attuale backend usa Stable
    Diffusion inpainting con maschera torso euristica: visivamente
    convincente per la demo ma non è un vero try-on garment-aware.
    IDM-VTON è elencato come path di sblocco in ADR-007.
-4. **Auth** — single-user locale (decisione consapevole, vedi PLAN
+3. **Auth** — single-user locale (decisione consapevole, vedi PLAN
    "Decisioni aperte").
-5. **Marketplace integration** — i suggerimenti di "vendita" oggi non
+4. **Marketplace integration** — i suggerimenti di "vendita" oggi non
    linkano a Vinted/Wallapop. Aggiunta lineare in Fase 7+.
 
 ---

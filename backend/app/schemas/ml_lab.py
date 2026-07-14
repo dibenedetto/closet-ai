@@ -13,11 +13,9 @@ class ModelInfo(BaseModel):
     nature: str                   # "own" — per il codice colore in UI
     task: str                     # descrizione breve del compito
     available: bool               # pesi/adapter presenti su disco
-    weights_path: str
     architecture: str | None = None
     metrics: dict | None = None   # metriche salvate nel checkpoint al training
     labels: list[str] | None = None
-    train_command: str            # comando per (ri)addestrare
 
 
 class DatasetInfo(BaseModel):
@@ -26,7 +24,6 @@ class DatasetInfo(BaseModel):
     available: bool
     n_samples: int | None = None
     detail: str | None = None
-    build_command: str
 
 
 class MlLabStatus(BaseModel):

@@ -31,9 +31,6 @@
    - <http://localhost:5173> — UI principale
    - <http://localhost:8000/docs> — Swagger UI (in caso serva mostrare un endpoint dal vivo)
 
-4. (Opzionale) Apri <http://localhost:5173/mirror> in una terza tab in
-   fullscreen `F11`: serve se vuoi mostrare il mock dello specchio.
-
 ---
 
 ## Scaletta (8-10 minuti)
@@ -125,15 +122,7 @@
   **stima CO₂ evitata** per ciascuno.
 - Esegui un'azione: appare nello storico e aggiorna le stats.
 
-### 7. (Opzionale) Specchio smart (1 minuto) — `/mirror`
-
-- Apri la pagina `/mirror` in fullscreen.
-- Mostra orologio + meteo + outfit suggerito → "Questa stessa pagina gira
-  su Raspberry Pi 5 con monitor verticale: lo studente in fretta la
-  mattina ottiene la proposta in un colpo d'occhio. La guida hardware è
-  in `docs/raspberry-pi.md`."
-
-### 8. Chiusura (30s)
+### 7. Chiusura (30s)
 
 - Riassumi: due ruoli AI:
   - **Machine learning applicato**: Fashion-CLIP pre-addestrato
@@ -165,5 +154,4 @@
 - [PLAN.md](../PLAN.md) — roadmap e stato dei task
 - [docs/api.md](api.md) — riferimento API
 - [docs/architecture.md](architecture.md) — ADR e decisioni tecniche
-- [docs/raspberry-pi.md](raspberry-pi.md) — setup hardware specchio
 - [backend/scripts/seed_demo.py](../backend/scripts/seed_demo.py) — seed dei dati di demo

@@ -54,14 +54,6 @@ def _load_ckpt_meta(path: Path) -> dict | None:
         return None
 
 
-def _rel(path: Path) -> str:
-    """Path relativo al repo se possibile, altrimenti assoluto (es. nei test)."""
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
-
-
 def _count_csv_rows(path: Path) -> int | None:
     if not path.is_file():
         return None
@@ -91,15 +83,13 @@ def get_models_status() -> MlLabStatus:
     models = [
         ModelInfo(
             key="condition-mlp",
-            name="Rete stato del capo (Approccio A)",
+            name="Rete per lo stato del capo",
             nature="own",
             task="Dalla foto: buono / usurato / danneggiato",
             available=COND_W.is_file(),
-            weights_path=_rel(COND_W),
-            architecture="Fashion-CLIP (frozen) → MLP 512→256→128→3",
+            architecture="Fashion-CLIP pre-addestrato → rete neurale a 3 classi",
             metrics=cond_metrics,
             labels=list(cond_meta.get("labels", [])) or None,
-            train_command="uv run python scripts/train_condition_model.py",
         ),
         ModelInfo(
             key="gap-mlp",
@@ -107,30 +97,26 @@ def get_models_status() -> MlLabStatus:
             nature="own",
             task="Dai dati aggregati: vuoti funzionali (multi-label)",
             available=GAP_W.is_file(),
-            weights_path=_rel(GAP_W),
-            architecture="MLP 14→64→32→6 (sigmoid multi-label)",
+            architecture="14 indicatori del guardaroba → rete neurale → 6 possibili gap",
             metrics=gap_meta.get("metrics"),
             labels=list(gap_meta.get("labels", [])) or None,
-            train_command="uv run python scripts/train_gap_model.py",
         ),
     ]
 
     datasets = [
         DatasetInfo(
             key="garment_condition",
-            name="Garment Condition (immagini degradate)",
+            name="Dataset per lo stato dei capi",
             available=CONDITION_MANIFEST.is_file(),
             n_samples=_count_csv_rows(CONDITION_MANIFEST),
             detail="3 stati bilanciati · foto reali con difetti annotati (COCO) + degradazione sintetica",
-            build_command="uv run python scripts/build_condition_dataset.py --per-class 150",
         ),
         DatasetInfo(
             key="wardrobe",
-            name="Wardrobe Gap (tabellare)",
+            name="Dataset per i gap del guardaroba",
             available=WARDROBE_CSV.is_file(),
             n_samples=_count_csv_rows(WARDROBE_CSV),
             detail="guardaroba simulati · 14 feature · 6 label multi-hot",
-            build_command="uv run python scripts/build_wardrobe_dataset.py --rows 5000",
         ),
     ]
 
@@ -157,10 +143,7 @@ def predict_condition(image: UploadFile = File(...)) -> ConditionPredictOut:
     if clf is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Rete stato non addestrata. Esegui: "
-                "uv run python scripts/train_condition_model.py"
-            ),
+            detail="Il modello per lo stato del capo non è disponibile.",
         )
 
     if image.content_type not in ALLOWED_IMAGE_CONTENT_TYPES:

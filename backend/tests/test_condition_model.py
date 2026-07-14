@@ -1,4 +1,4 @@
-"""Test del modello visivo di diagnosi condizione (Approccio A) e del
+"""Test del modello visivo di diagnosi condizione e del
 fallback all'euristica."""
 
 from __future__ import annotations

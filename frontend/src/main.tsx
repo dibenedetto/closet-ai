@@ -9,7 +9,6 @@ import EditItemPage from './pages/EditItemPage'
 import ItemDetailPage from './pages/ItemDetailPage'
 import DashboardPage from './pages/DashboardPage'
 import TodayPage from './pages/TodayPage'
-import MirrorPage from './pages/MirrorPage'
 import MlLabPage from './pages/MlLabPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RouteErrorPage from './pages/RouteErrorPage'
@@ -32,8 +31,6 @@ const router = createBrowserRouter([
       { path: '*', element: <NotFoundPage /> },
     ],
   },
-  // La pagina specchio gira fullscreen, senza topbar/nav.
-  { path: '/mirror', element: <MirrorPage /> },
 ])
 
 const rootEl = document.getElementById('root')

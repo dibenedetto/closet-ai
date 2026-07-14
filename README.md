@@ -163,7 +163,7 @@ uv run python scripts/train_condition_model.py --no-cache   # addestra + valuta 
 
 I pesi salvati (`ml/weights/condition_head.pt`) vengono caricati
 automaticamente dal backend, che sostituisce l'euristica con la rete.
-Dettagli in [docs/architecture.md](docs/architecture.md) (ADR-009) e nella
+Dettagli in [docs/architecture.md](docs/architecture.md) e nella
 [datasheet del dataset](docs/dataset-datasheet.md).
 
 ## Gap analysis del guardaroba (rete neurale tabellare)

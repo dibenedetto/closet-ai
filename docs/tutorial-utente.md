@@ -45,7 +45,7 @@ Nel menu principale sono disponibili:
 - «Cosa metto?»: proposte di outfit per la giornata;
 - «Impatto»: utilizzi, stato, capi fantasma, gap e azioni circolari;
 - «Aggiungi un capo»: inserimento di un nuovo elemento;
-- «ML Lab» e «Specchio»: prototipi dimostrativi, non necessari nell'uso
+- «ML Lab»: approfondimento tecnico sui modelli, non necessario nell'uso
   quotidiano.
 
 Su uno schermo piccolo le voci principali sono nella barra in basso. Il
@@ -380,15 +380,12 @@ locale e non sono necessarie per completare il flusso principale.
 - «ML Lab» è un'area tecnica: mostra disponibilità e metriche dei due modelli,
   consente di provare lo stato su una foto senza salvare un capo e di simulare
   un guardaroba immaginario per la gap analysis. Non modifica il guardaroba.
-- «Specchio» è una vista kiosk a schermo intero con ora, meteo e una proposta;
-  si aggiorna ogni cinque minuti. È un prototipo per uno smart mirror, non una
-  funzione richiesta per il normale utilizzo web.
 
 ### Cosa dire
 
 > «Il percorso principale continua a funzionare senza i moduli generativi. Il
-> Lab e lo Specchio servono a rendere ispezionabili due estensioni del
-> prototipo, ma non vanno confusi con le attività quotidiane dell'utente.»
+> Lab rende ispezionabili i modelli addestrati, ma non fa parte delle attività
+> quotidiane dell'utente.»
 
 ### Risultato atteso
 

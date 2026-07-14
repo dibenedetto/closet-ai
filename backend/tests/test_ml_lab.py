@@ -9,10 +9,11 @@ def test_models_status_lists_two_models(client) -> None:
     assert keys == {"condition-mlp", "gap-mlp"}
     # Nei test i pesi puntano a path inesistenti → tutto non disponibile.
     assert all(m["available"] is False for m in body["models"])
-    # Ogni modello dichiara natura e comando di training.
+    # La risposta pubblica descrive i modelli senza esporre path o comandi interni.
     for m in body["models"]:
         assert m["nature"] == "own"
-        assert m["train_command"].startswith("uv run")
+        assert "weights_path" not in m
+        assert "train_command" not in m
 
 
 def test_models_status_includes_datasets(client) -> None:
@@ -20,7 +21,7 @@ def test_models_status_includes_datasets(client) -> None:
     keys = {d["key"] for d in body["datasets"]}
     assert keys == {"garment_condition", "wardrobe"}
     for d in body["datasets"]:
-        assert d["build_command"].startswith("uv run")
+        assert "build_command" not in d
 
 
 def test_condition_predict_503_when_not_trained(client, png) -> None:
@@ -29,7 +30,7 @@ def test_condition_predict_503_when_not_trained(client, png) -> None:
         files={"image": ("a.png", png(), "image/png")},
     )
     assert r.status_code == 503
-    assert "train_condition_model" in r.json()["detail"]
+    assert r.json()["detail"] == "Il modello per lo stato del capo non è disponibile."
 
 
 def test_condition_predict_with_fake_classifier(client, png, monkeypatch) -> None:

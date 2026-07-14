@@ -71,18 +71,13 @@ export default function App() {
           Aggiungi un capo
         </Link>
 
-        <nav className="sidebar-nav sidebar-nav-secondary" aria-label="Strumenti">
-          <span className="nav-section-label">Prototipi</span>
+        <nav className="sidebar-nav sidebar-nav-secondary" aria-label="Approfondimenti">
+          <span className="nav-section-label">Approfondimenti</span>
           <NavLink to="/lab" className={navClass}>
             <span className="nav-icon"><Icon name="flask" size={19} /></span>
-            <span><strong>ML Lab</strong><small>Modelli e test</small></span>
+            <span><strong>ML Lab</strong><small>Come funziona l’AI</small></span>
             <Icon name="chevron-right" size={16} className="nav-chevron" />
           </NavLink>
-          <Link to="/mirror" className="nav-link">
-            <span className="nav-icon"><Icon name="wand" size={19} /></span>
-            <span><strong>Specchio</strong><small>Vista kiosk</small></span>
-            <Icon name="chevron-right" size={16} className="nav-chevron" />
-          </Link>
         </nav>
 
         <div className="sidebar-footnote">

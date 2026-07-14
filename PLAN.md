@@ -180,11 +180,11 @@ Hardware target: GPU locale.
 - [x] 5 test (MLP, fallback graceful, predizione con fake, file mancante)
 - [ ] **B** — fine-tuning CNN (ResNet/EfficientNet) con torchvision *(opzionale)*
 - [x] **C** — VLM + LoRA: **codice production-ready** (poi rimosso, vedi 7.3). Training (`train_condition_vlm_lora.py`), distillazione tutorial (`distill_tutorials.py`), inferenza (`app/ml/condition_vlm.py`) e **pipeline automatica** (`train_condition_vlm_pipeline.py`). Manca solo eseguire sulla GPU dell'utente.
-- [x] Integrazione Approccio C in `services/condition.py` — routing a cascata `CLOSETAI_CONDITION_BACKEND` (auto/vlm-lora/clip-mlp/heuristic) con fallback fail-safe, `defect`+`tutorial` esposti in `/diagnose` + UI. 13 test (VLM mock).
+- [x] Integrazione del prototipo VLM+LoRA in `services/condition.py` — routing a cascata `CLOSETAI_CONDITION_BACKEND` (auto/vlm-lora/clip-mlp/heuristic) con fallback fail-safe, `defect`+`tutorial` esposti in `/diagnose` + UI. 13 test (VLM mock).
 - [ ] Raccolta foto reali → riaddestrare (riduce il domain gap del sintetico)
 
 ### 7.3 Decisione: rimozione della feature "tutorial di riparazione"
-- [x] **Rimossa interamente** la feature tutorial: knowledge base hardcoded (`repair_tutorials.py`), arricchimento LLM (`GET /repair-tutorials/enrich`), endpoint `/repair-tutorials*`, e l'intero **Approccio C** (VLM+LoRA, `condition_vlm.py`, `train_condition_vlm_lora.py`, `train_condition_vlm_pipeline.py`, `distill_tutorials.py`). Motivazione: principio *MVP first* — il valore di un how-to testuale generico era basso rispetto al costo di mantenere due modelli generativi/vision aggiuntivi. L'azione circolare `riparazione` resta loggabile (senza testo guidato). ADR-010 marcata come superata in `docs/architecture.md`.
+- [x] **Rimossa interamente** la feature tutorial: knowledge base hardcoded (`repair_tutorials.py`), arricchimento LLM (`GET /repair-tutorials/enrich`), endpoint `/repair-tutorials*`, e il prototipo VLM+LoRA (`condition_vlm.py`, `train_condition_vlm_lora.py`, `train_condition_vlm_pipeline.py`, `distill_tutorials.py`). Motivazione: principio *MVP first* — il valore di un how-to testuale generico era basso rispetto al costo di mantenere due modelli generativi/vision aggiuntivi. L'azione circolare `riparazione` resta loggabile (senza testo guidato).
 - [x] `services/condition.py` torna a 2 backend in cascata: `clip-mlp` → `heuristic` (era `vlm-lora` → `clip-mlp` → `heuristic`).
 - [x] Frontend: rimossi modale tutorial, select difetti, bottone "Mostra tutorial" da `<CircularSection>`.
 
@@ -225,8 +225,8 @@ presentazione e dare visibilità tecnica alle reti addestrate.
 
 Tre richieste dirette dell'utente, in preparazione al pre-esame:
 
-- [x] **Rimossa la feature "tutorial di riparazione"** (vedi Fase 7.3 e
-  ADR-010 in `docs/architecture.md`): scelta di scope, non un bug.
+- [x] **Rimossa la feature "tutorial di riparazione"** (vedi Fase 7.3):
+  scelta di scope, non un bug.
 - [x] **Restyle frontend moderno**: nuovi design token in `index.css`
   (palette, radius/shadow scale, font Inter Variable self-hosted via
   `@fontsource-variable/inter`), header sticky con glass/blur, menu mobile

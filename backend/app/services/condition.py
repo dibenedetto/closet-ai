@@ -2,7 +2,7 @@
 
 Due strategie, in ordine di capacità decrescente:
 
-1. **MLP su Fashion-CLIP** (Approccio A, ADR-009): una testa addestrata da
+1. **MLP su Fashion-CLIP**: una testa addestrata da
    noi predice lo stato dalla foto. Gira su CPU.
 
 2. **Euristica** (fallback sempre disponibile): basata su numero di utilizzi
@@ -30,7 +30,7 @@ from app.models import Item, WearEvent
 
 log = logging.getLogger(__name__)
 
-# "nuovo" è stato fuso in "buono" (vedi ADR-009): su foto reali il confine
+# "nuovo" è stato fuso in "buono": su foto reali il confine
 # fra i due era artificiale e indistinguibile.
 CONDITIONS = ("buono", "usurato", "danneggiato")
 
@@ -66,7 +66,7 @@ def _age_in_days(item: Item, today: date) -> int | None:
 def _classify(wear_count: int, days_owned: int | None) -> tuple[str, str]:
     age = days_owned if days_owned is not None else 0
     if wear_count == 0 and age < 60:
-        # classe "nuovo" fusa in "buono" (ADR-009)
+        # classe "nuovo" fusa in "buono"
         return "buono", f"mai indossato, posseduto da {age} giorni"
     if wear_count > 80 or age > 1825:
         return "danneggiato", f"{wear_count} utilizzi su {age} giorni: usura significativa"

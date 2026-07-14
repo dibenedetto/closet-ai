@@ -45,7 +45,6 @@ LLM_CACHE_TTL_HOURS: int = int(os.environ.get("CLOSETAI_LLM_CACHE_TTL_HOURS", "2
 #   "auto" (default) → prova clip-mlp, poi heuristic (primo disponibile)
 #   "clip-mlp"       → forza la testa MLP su embedding CLIP (richiede pesi)
 #   "heuristic"      → forza l'euristica wear_count + età (sempre disponibile)
-# Vedi ADR-009 in docs/architecture.md.
 CONDITION_BACKEND: str = os.environ.get("CLOSETAI_CONDITION_BACKEND", "auto")
 
 # Try-on virtuale via diffusers: backend "diffusers" (locale) o "disabled".

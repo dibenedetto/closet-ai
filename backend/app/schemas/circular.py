@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# "nuovo" fuso in "buono" (ADR-009): su foto reali erano indistinguibili.
+# "nuovo" fuso in "buono": su foto reali erano indistinguibili.
 Condition = Literal["buono", "usurato", "danneggiato"]
 ActionType = Literal["riparazione", "swap", "vendita", "donazione", "riciclo"]
 

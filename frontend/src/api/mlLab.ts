@@ -8,11 +8,9 @@ export interface ModelInfo {
   nature: string
   task: string
   available: boolean
-  weights_path: string
   architecture: string | null
   metrics: Record<string, unknown> | null
   labels: string[] | null
-  train_command: string
 }
 
 export interface DatasetInfo {
@@ -21,7 +19,6 @@ export interface DatasetInfo {
   available: boolean
   n_samples: number | null
   detail: string | null
-  build_command: string
 }
 
 export interface MlLabStatus {

@@ -98,9 +98,9 @@ Seed fisso (`--seed 42`) → generazione **riproducibile**.
 
 ## 4 · Usi previsti
 
-- **Approccio A** (adottato): addestrare una testa di classificazione
+- **Soluzione adottata**: addestrare una testa di classificazione
   leggera sopra gli embedding di Fashion-CLIP (foto → embedding → stato).
-- **Approccio B** (non esplorato): fine-tuning di una CNN
+- **Alternativa non esplorata**: fine-tuning di una CNN
   (ResNet/EfficientNet) per la classificazione dello stato.
 
 **Usi sconsigliati**: qualsiasi conclusione su capi reali senza prima
@@ -120,7 +120,7 @@ ri-generare il dataset a partire da **foto reali** (vedi limiti sotto).
 - **Bootstrap = icone**: in assenza totale di immagini sorgente, le basi
   sono sagome stilizzate, ancora più lontane da foto reali.
 
-> **Baseline misurate** (Approccio A, MLP su embedding Fashion-CLIP):
+> **Baseline misurate** (MLP su embedding Fashion-CLIP):
 >
 > | Sorgente dataset                    | Test acc | Note                                |
 > | ----------------------------------- | -------- | ----------------------------------- |

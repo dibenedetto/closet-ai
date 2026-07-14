@@ -1,6 +1,6 @@
 """Rete neurale addestrata da noi per la diagnosi dello stato del capo.
 
-Architettura (Approccio A): **testa MLP su embedding Fashion-CLIP**.
+Architettura: **testa MLP su embedding Fashion-CLIP**.
 
     foto ──▶ Fashion-CLIP (frozen) ──▶ embedding 512d ──▶ MLP ──▶ stato (3 classi)
             [pre-addestrato]                              [addestrato da noi]

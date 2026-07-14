@@ -21,8 +21,17 @@ import {
 } from '../api/mlLab'
 
 const NATURE_STYLE: Record<string, { label: string; color: string }> = {
-  own: { label: '🟩 rete allenata da noi', color: 'var(--ok)' },
+  own: { label: '🟩 modello addestrato da noi', color: 'var(--ok)' },
   gen: { label: '🟪 AI generativa', color: '#b48ce8' },
+}
+
+const METRIC_LABELS: Record<string, string> = {
+  val_accuracy: 'Accuracy validazione',
+  test_accuracy: 'Accuracy test',
+  subset_accuracy: 'Accuracy esatta',
+  micro_f1: 'Micro-F1',
+  macro_f1: 'Macro-F1',
+  hamming_loss: 'Hamming loss',
 }
 
 // Categorie modificabili nel simulatore gap (sottoinsieme rappresentativo).
@@ -134,9 +143,9 @@ export default function MlLabPage() {
   return (
     <section>
       <PageHeader
-        eyebrow="Area prototipo"
+        eyebrow="Approfondimento tecnico"
         title="ML Lab"
-        description="Training, test ed evaluation delle reti addestrate per stato dei capi e gap analysis."
+        description="Modelli, dati di addestramento e prove interattive per lo stato dei capi e i gap del guardaroba."
       />
 
       {/* ── 1 · Stato dei modelli ─────────────────────────────────── */}
@@ -173,17 +182,12 @@ export default function MlLabPage() {
                     .filter(([, v]) => typeof v === 'number')
                     .map(([k, v]) => (
                       <div key={k}>
-                        <div className="muted" style={{ fontSize: 10 }}>{k}</div>
+                        <div className="muted" style={{ fontSize: 10 }}>{METRIC_LABELS[k] ?? k.replaceAll('_', ' ')}</div>
                         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ok)' }}>{fmtMetric(v)}</div>
                       </div>
                     ))}
                 </div>
               )}
-              <p className="muted" style={{ fontSize: 10, margin: 0 }}>
-                pesi: <code>{m.weights_path}</code>
-                <br />
-                train: <code>{m.train_command}</code>
-              </p>
             </section>
           )
         })}
@@ -203,9 +207,6 @@ export default function MlLabPage() {
                 {d.available ? `· ${d.n_samples ?? '?'} campioni` : '· non generato'}
               </span>
               <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{d.detail}</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
-                <code>{d.build_command}</code>
-              </div>
             </div>
           ))}
         </div>

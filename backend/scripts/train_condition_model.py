@@ -1,4 +1,4 @@
-"""Addestra la testa MLP per la diagnosi dello stato del capo (Approccio A).
+"""Addestra la testa MLP per la diagnosi dello stato del capo.
 
 Pipeline:
 
