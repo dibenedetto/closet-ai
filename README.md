@@ -125,8 +125,9 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
 ## Materiali per l’esame ufficiale
 
 - **Presentazione**: [docs/ClosetAI-esame-ufficiale.pptx](docs/ClosetAI-esame-ufficiale.pptx) —
-  16 slide in italiano, con commento orale incorporato in ogni slide. Distingue
-  esplicitamente modelli nostri, pre-addestrati, generativi e regole.
+  14 slide in italiano: prima una user story che racconta l'intera esperienza
+  dell'app, poi le scelte tecniche e i diversi tipi di intelligenza utilizzati.
+  Ogni slide include note orali native per accompagnare l'esposizione.
 - **Guida orale**: [docs/exam-oral-guide.md](docs/exam-oral-guide.md) — risposte
   sui capi fantasma, numeri difendibili, domande probabili e roadmap mobile.
 - **Tutorial lato utente**: [docs/tutorial-utente.md](docs/tutorial-utente.md) —
