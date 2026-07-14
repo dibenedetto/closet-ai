@@ -135,6 +135,9 @@ npm run typecheck                    # controllo dei tipi TS (no emit)
 - **Spiegazione tecnica ad alto livello**:
   [docs/spiegazione-tecnica-alto-livello.md](docs/spiegazione-tecnica-alto-livello.md) —
   architettura, flussi, modelli, regole, limiti e traccia orale per l'esame.
+- **Registro tool e prompt**:
+  [docs/prompt-register-progetto.md](docs/prompt-register-progetto.md) — prompt
+  riproducibili, verifiche, tentativi scartati e gestione delle allucinazioni.
 - **Notebook ML**: [ml/notebooks/exam/](ml/notebooks/exam/) — cinque notebook
   autosufficienti ed eseguiti: due modelli caricati dal prodotto e tre
   esperimenti accademici chiaramente separati.
