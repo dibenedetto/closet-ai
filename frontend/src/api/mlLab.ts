@@ -11,6 +11,8 @@ export interface ModelInfo {
   architecture: string | null
   metrics: Record<string, unknown> | null
   labels: string[] | null
+  notebook_filename: string | null
+  notebook_available: boolean
 }
 
 export interface DatasetInfo {
@@ -47,6 +49,13 @@ export interface GapPredictOut {
   source: string
 }
 
+export interface NotebookOpenOut {
+  opened: boolean
+  application: string
+  filename: string
+  message: string
+}
+
 export async function getMlLabStatus(): Promise<MlLabStatus> {
   return jsonOrThrow<MlLabStatus>(await fetch(`${API_BASE}/ml/models`))
 }
@@ -71,4 +80,14 @@ export async function predictGap(input: GapPredictIn): Promise<GapPredictOut> {
 
 export function confusionMatrixUrl(): string {
   return `${API_BASE}/ml/condition/confusion-matrix`
+}
+
+export function trainingNotebookUrl(modelKey: string): string {
+  return `${API_BASE}/ml/notebooks/${encodeURIComponent(modelKey)}`
+}
+
+export async function openTrainingNotebook(modelKey: string): Promise<NotebookOpenOut> {
+  return jsonOrThrow<NotebookOpenOut>(
+    await fetch(`${trainingNotebookUrl(modelKey)}/open`, { method: 'POST' }),
+  )
 }

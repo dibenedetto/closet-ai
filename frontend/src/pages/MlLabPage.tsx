@@ -9,12 +9,15 @@
 import { useEffect, useState } from 'react'
 
 import PageHeader from '../components/PageHeader'
+import Icon from '../components/Icon'
 
 import {
   confusionMatrixUrl,
   getMlLabStatus,
+  openTrainingNotebook,
   predictCondition,
   predictGap,
+  trainingNotebookUrl,
   type ConditionPredictOut,
   type GapPredictOut,
   type MlLabStatus,
@@ -69,6 +72,8 @@ function ProbBar({ label, value, highlight }: { label: string; value: number; hi
 export default function MlLabPage() {
   const [status, setStatus] = useState<MlLabStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [openingNotebook, setOpeningNotebook] = useState<string | null>(null)
+  const [notebookNotice, setNotebookNotice] = useState<{ ok: boolean; text: string } | null>(null)
 
   // — prova condition —
   const [condFile, setCondFile] = useState<File | null>(null)
@@ -135,6 +140,23 @@ export default function MlLabPage() {
     }
   }
 
+  async function onOpenNotebook(modelKey: string) {
+    if (openingNotebook) return
+    setOpeningNotebook(modelKey)
+    setNotebookNotice(null)
+    try {
+      const result = await openTrainingNotebook(modelKey)
+      setNotebookNotice({ ok: true, text: result.message })
+    } catch (e: unknown) {
+      setNotebookNotice({
+        ok: false,
+        text: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setOpeningNotebook(null)
+    }
+  }
+
   if (error) return <p className="error">Errore: {error}</p>
   if (status == null) return <p className="muted">Caricamento stato modelli…</p>
 
@@ -188,10 +210,45 @@ export default function MlLabPage() {
                     ))}
                 </div>
               )}
+              <div className="lab-notebook-block">
+                <div>
+                  <strong>Notebook di addestramento</strong>
+                  <small>{m.notebook_filename ?? 'file non disponibile'}</small>
+                </div>
+                <div className="lab-notebook-actions">
+                  <button
+                    type="button"
+                    className="ghost button-small"
+                    disabled={!m.notebook_available || openingNotebook != null}
+                    onClick={() => void onOpenNotebook(m.key)}
+                  >
+                    <Icon name="edit" size={16} />
+                    {openingNotebook === m.key ? 'Apro…' : 'Apri in VS Code'}
+                  </button>
+                  {m.notebook_available && (
+                    <a
+                      className="text-button"
+                      href={trainingNotebookUrl(m.key)}
+                      download={m.notebook_filename ?? true}
+                    >
+                      Scarica .ipynb
+                    </a>
+                  )}
+                </div>
+              </div>
             </section>
           )
         })}
       </div>
+
+      {notebookNotice && (
+        <p
+          className={notebookNotice.ok ? 'lab-notebook-notice' : 'error lab-notebook-notice'}
+          role="status"
+        >
+          {notebookNotice.text}
+        </p>
+      )}
 
       {/* dataset */}
       <section className="panel" style={{ marginBottom: 16 }}>

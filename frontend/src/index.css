@@ -468,6 +468,14 @@ button .loading-orbit { width: 15px; height: 15px; border-color: rgba(255,255,25
 .clear-img { position: absolute; right: 10px; top: 10px; }
 .lab-status-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .lab-dataset-grid, .lab-demo-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.lab-notebook-block { display: grid; gap: 10px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 13px; }
+.lab-notebook-block strong, .lab-notebook-block small { display: block; }
+.lab-notebook-block strong { font-size: 11px; }
+.lab-notebook-block small { margin-top: 3px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.lab-notebook-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lab-notebook-actions .text-button { font-size: 11px; }
+.lab-notebook-notice { margin: -3px 0 16px; border: 1px solid #cbe0cf; border-radius: 12px; background: #eef7f0; padding: 10px 12px; color: var(--brand-deep); font-size: 12px; }
+.lab-notebook-notice.error { border-color: #ebc9c2; background: var(--danger-soft); color: var(--danger); }
 .upload-zone:focus-within { border-color: var(--brand); box-shadow: 0 0 0 4px rgba(40,94,72,.10); }
 .upload-zone input:focus { box-shadow: none; }
 

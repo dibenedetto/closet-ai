@@ -16,6 +16,8 @@ class ModelInfo(BaseModel):
     architecture: str | None = None
     metrics: dict | None = None   # metriche salvate nel checkpoint al training
     labels: list[str] | None = None
+    notebook_filename: str | None = None
+    notebook_available: bool = False
 
 
 class DatasetInfo(BaseModel):
@@ -52,3 +54,12 @@ class GapPredictOut(BaseModel):
     probabilities: dict[str, float]    # vuote se fallback a regole
     balanced: bool
     source: str                        # "neural-net" | "rules"
+
+
+class NotebookOpenOut(BaseModel):
+    """Esito dell'apertura locale di un notebook di training."""
+
+    opened: bool
+    application: str
+    filename: str
+    message: str

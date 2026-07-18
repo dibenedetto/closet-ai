@@ -11,6 +11,7 @@ Run from ``backend/`` with::
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from textwrap import dedent
 
@@ -85,7 +86,45 @@ def build_condition_notebook():
             rende visibili dati, scelte, metriche e limiti per l'esame.
             """
         ),
+        md(
+            """
+            ## Passo 1 — Individuare il progetto e fissare la riproducibilità
+
+            **Obiettivo.** Fare in modo che il notebook funzioni anche quando
+            viene aperto da VS Code o Jupyter in una sottocartella diversa.
+
+            **Cosa fa la cella.** Risale le directory finché trova insieme
+            `backend/pyproject.toml` e la cartella `ml/`; quella è la radice del
+            repository. Imposta inoltre `SEED = 42`, che verrà riutilizzato da
+            Python, NumPy e PyTorch.
+
+            **Cosa osservare.** In output deve apparire il percorso assoluto del
+            repository. Se la radice non viene trovata, il notebook si ferma
+            subito con un messaggio esplicito invece di leggere file sbagliati.
+            """
+        ),
         ROOT_CELL,
+        md(
+            """
+            ## Passo 2 — Caricare librerie, manifest ed embedding
+
+            **Obiettivo.** Preparare dati e strumenti senza scaricare modelli
+            durante l'esame.
+
+            **Cosa fa la cella.** Importa le librerie, applica il seed e carica:
+
+            1. `manifest.csv`, che descrive immagini, stato e split;
+            2. `clip_embeddings.npz`, che contiene i vettori Fashion-CLIP già
+               calcolati, le etichette numeriche e lo split;
+            3. le tre etichette leggibili: buono, usurato e danneggiato.
+
+            Fashion-CLIP non viene addestrato qui: è un estrattore congelato.
+            Noi addestreremo soltanto la testa MLP sui suoi 512 valori.
+
+            **Cosa osservare.** Numero di campioni, dimensione 512D e tabella di
+            distribuzione delle classi nei tre split.
+            """
+        ),
         code(
             """
             # Import riproducibili. Gli embedding CLIP sono già in cache: in questo
@@ -122,7 +161,10 @@ def build_condition_notebook():
         ),
         md(
             """
-            ### Provenienza dei dati
+            ## Passo 3 — Comprendere provenienza e limiti dei dati
+
+            **Obiettivo.** Stabilire che cosa rappresentano davvero i campioni
+            prima di interpretare una metrica.
 
             Il dataset è ibrido: immagini con difetti reali dal dataset COCO
             *Defect-Clothes* e degradazioni sintetiche controllate per simulare
@@ -133,6 +175,28 @@ def build_condition_notebook():
             non sono esclusi con certezza fra train e test. Perciò l'accuracy qui
             sotto è un **holdout del prototipo**, non una validazione esterna né
             una certificazione industriale.
+
+            **Cosa osservare.** Un risultato alto può descrivere bene questo
+            holdout e comunque peggiorare su foto domestiche, luci diverse o
+            capi non presenti nelle sorgenti. Questo limite va raccontato insieme
+            all'accuracy, non soltanto nelle conclusioni.
+            """
+        ),
+        md(
+            """
+            ## Passo 4 — Separare i dati e definire la nostra rete
+
+            **Obiettivo.** Evitare contaminazioni tra training, validation e
+            test e dichiarare con precisione quale parte è stata allenata da noi.
+
+            **Cosa fa la cella.** Converte ogni split in tensori PyTorch e crea
+            una MLP `512 → 256 → 128 → 3`. ReLU introduce non-linearità;
+            Dropout spegne casualmente una quota di neuroni durante il training
+            per limitare l'overfitting; l'ultimo layer produce tre logits.
+
+            **Cosa osservare.** Le forme dei tre tensori e il numero di parametri
+            addestrabili. Fashion-CLIP non compare tra questi parametri perché i
+            suoi embedding sono già stati calcolati e restano congelati.
             """
         ),
         code(
@@ -159,6 +223,27 @@ def build_condition_notebook():
             trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
             print(f"Parametri addestrabili della nostra testa: {trainable:,}")
             model
+            """
+        ),
+        md(
+            """
+            ## Passo 5 — Addestrare con validation ed early stopping
+
+            **Obiettivo.** Ottimizzare la rete senza usare il test per prendere
+            decisioni.
+
+            **Cosa fa la cella.** Adam aggiorna i pesi minimizzando la
+            cross-entropy. Dopo ogni epoca calcoliamo l'accuracy di validation;
+            salviamo in memoria il miglior stato e interrompiamo dopo 12 epoche
+            senza miglioramenti.
+
+            **Perché.** Continuare ad allenare dopo che la validation smette di
+            migliorare può memorizzare il training set. L'early stopping è una
+            misura semplice contro questo rischio.
+
+            **Cosa osservare.** Epoca di arresto, migliore validation accuracy e
+            andamento delle due curve. La loss dovrebbe scendere; una grande
+            divergenza con la validation sarebbe un segnale di overfitting.
             """
         ),
         code(
@@ -207,6 +292,23 @@ def build_condition_notebook():
             plt.tight_layout(); plt.show()
             """
         ),
+        md(
+            """
+            ## Passo 6 — Valutare una sola volta sul test
+
+            **Obiettivo.** Stimare le prestazioni su campioni che non hanno
+            guidato né l'ottimizzazione né l'early stopping.
+
+            **Cosa fa la cella.** Calcola probabilità e classe più probabile,
+            quindi mostra accuracy, precision, recall, F1 e matrice di
+            confusione.
+
+            **Come leggere l'output.** L'accuracy riassume quante predizioni sono
+            corrette. La matrice di confusione mostra invece *quali* stati sono
+            scambiati: per un'app di cura è importante distinguere, ad esempio,
+            un capo danneggiato da uno soltanto usurato.
+            """
+        ),
         code(
             """
             # Il test viene aperto una sola volta, dopo aver fissato il modello.
@@ -227,6 +329,22 @@ def build_condition_notebook():
             plt.tight_layout(); plt.show()
             """
         ),
+        md(
+            """
+            ## Passo 7 — Ispezionare una singola inferenza
+
+            **Obiettivo.** Collegare le metriche aggregate a un output simile a
+            quello mostrato nella web app.
+
+            **Cosa fa la cella.** Seleziona un campione del test, confronta
+            etichetta vera e predetta e ordina le tre probabilità.
+
+            **Cosa osservare.** La classe scelta non racconta tutta
+            l'incertezza: due probabilità vicine indicano un caso ambiguo. Per
+            questo l'app permette alla persona di confermare o correggere lo
+            stato suggerito.
+            """
+        ),
         code(
             """
             # Esempio di inferenza completamente tracciabile su un campione test.
@@ -240,6 +358,8 @@ def build_condition_notebook():
         ),
         md(
             """
+            ## Passo 8 — Interpretare il risultato e dichiarare i limiti
+
             ### Cosa dire all'esame
 
             - Abbiamo congelato Fashion-CLIP e addestrato solo circa 164 mila
@@ -272,7 +392,38 @@ def build_gap_notebook():
             Ogni riga rappresenta un intero guardaroba, non una singola foto.
             """
         ),
+        md(
+            """
+            ## Passo 1 — Individuare il progetto e fissare la riproducibilità
+
+            **Obiettivo.** Rendere il notebook indipendente dalla cartella da cui
+            viene avviato e ottenere risultati ripetibili.
+
+            **Cosa fa la cella.** Trova la radice del repository e imposta il seed
+            condiviso. Questo permette di aprire il file direttamente dalla
+            pagina ML Lab in VS Code senza dover cambiare manualmente directory.
+
+            **Cosa osservare.** Il percorso stampato deve coincidere con la
+            cartella principale di ClosetAI.
+            """
+        ),
         ROOT_CELL,
+        md(
+            """
+            ## Passo 2 — Caricare il dataset e definire input e output
+
+            **Obiettivo.** Trasformare ogni guardaroba simulato in un problema
+            numerico dichiarato.
+
+            **Cosa fa la cella.** Carica il CSV, seleziona 14 feature aggregate e
+            sei label binarie. Le feature descrivono quantità, proporzioni,
+            varietà cromatica, presenza di neutri e quota di ghost garments.
+
+            **Cosa osservare.** Forma della matrice `X`, forma della matrice `Y` e
+            prevalenza di ogni label. Classi molto rare richiedono particolare
+            attenzione quando si leggono le metriche.
+            """
+        ),
         code(
             """
             import copy
@@ -309,7 +460,9 @@ def build_gap_notebook():
         ),
         md(
             """
-            ### Perché “multi-label”
+            ## Passo 3 — Capire perché il problema è multi-label
+
+            **Obiettivo.** Scegliere una formulazione coerente con il prodotto.
 
             Le sei uscite hanno una sigmoid indipendente: lo stesso guardaroba
             può contemporaneamente avere poche scarpe, poca varietà cromatica e
@@ -320,6 +473,27 @@ def build_gap_notebook():
             rete dimostra la pipeline e può apprendere interazioni, ma **non prova
             che quei criteri siano universalmente corretti**. Con dati reali,
             servirebbero feedback degli utenti e una nuova validazione.
+
+            **Cosa osservare.** Ogni riga di `Y` contiene sei valori 0/1 e può
+            avere più di un 1. Per questo usiamo sei sigmoid indipendenti e non
+            una softmax, che obbligherebbe il modello a scegliere un solo gap.
+            """
+        ),
+        md(
+            """
+            ## Passo 4 — Creare gli split, normalizzare e definire la rete
+
+            **Obiettivo.** Preparare dati comparabili senza leakage e costruire
+            la MLP usata dal backend.
+
+            **Cosa fa la cella.** Genera uno split deterministico 70/15/15. Media
+            e deviazione vengono calcolate soltanto sul training set e applicate
+            anche a validation e test. La rete è `14 → 64 → 32 → 6` con ReLU e
+            Dropout.
+
+            **Cosa osservare.** Dimensione dei tre split e numero di parametri.
+            Se usassimo tutto il dataset per la normalizzazione, informazioni del
+            test entrerebbero indirettamente nel training.
             """
         ),
         code(
@@ -356,6 +530,22 @@ def build_gap_notebook():
             model = build_model()
             print(f"Parametri addestrabili: {sum(p.numel() for p in model.parameters()):,}")
             model
+            """
+        ),
+        md(
+            """
+            ## Passo 5 — Addestrare le sei uscite con early stopping
+
+            **Obiettivo.** Imparare contemporaneamente i sei gap mantenendo
+            separata la validation.
+
+            **Cosa fa la cella.** `BCEWithLogitsLoss` combina sigmoid e binary
+            cross-entropy in forma numericamente stabile. Adam aggiorna i pesi;
+            l'early stopping conserva il modello con validation loss minima.
+
+            **Cosa osservare.** Epoca di arresto e curve train/validation. Se la
+            loss di training continua a scendere mentre quella di validation
+            risale, la rete sta iniziando a sovra-adattarsi.
             """
         ),
         code(
@@ -397,6 +587,24 @@ def build_gap_notebook():
             plt.tight_layout(); plt.show()
             """
         ),
+        md(
+            """
+            ## Passo 6 — Valutare con metriche adatte al multi-label
+
+            **Obiettivo.** Non ridurre sei decisioni indipendenti a un solo
+            numero poco informativo.
+
+            **Cosa fa la cella.** Applica la soglia operativa 0,5 e calcola:
+
+            - **subset accuracy**, corretta solo se tutte le sei label coincidono;
+            - **micro-F1**, che pesa tutte le decisioni insieme;
+            - **macro-F1**, che assegna lo stesso peso a ogni tipo di gap;
+            - **Hamming loss**, quota di singole etichette sbagliate.
+
+            **Cosa osservare.** La tabella F1 per label aiuta a scoprire gap
+            deboli che la sola micro-F1 potrebbe nascondere.
+            """
+        ),
         code(
             """
             # Soglia operativa fissata a 0.5, come nel backend.
@@ -421,6 +629,21 @@ def build_gap_notebook():
             per_label
             """
         ),
+        md(
+            """
+            ## Passo 7 — Leggere il consiglio di un guardaroba
+
+            **Obiettivo.** Collegare le sei probabilità al comportamento della
+            pagina Impatto e del simulatore ML Lab.
+
+            **Cosa fa la cella.** Mostra per un campione test la probabilità di
+            ogni gap, la decisione dopo soglia e l'etichetta vera.
+
+            **Cosa osservare.** Una probabilità vicina a 0,5 è incerta; il valore
+            non deve diventare automaticamente un ordine di acquisto. La UI lo
+            traduce in un consiglio e può anche concludere che non manca nulla.
+            """
+        ),
         code(
             """
             # Esempio leggibile: probabilità di tutti i gap per un guardaroba test.
@@ -436,6 +659,8 @@ def build_gap_notebook():
         ),
         md(
             """
+            ## Passo 8 — Interpretare il risultato e dichiarare i limiti
+
             ### Cosa dire all'esame
 
             - “Multi-label” significa più risposte vere nello stesso esempio.
@@ -824,17 +1049,29 @@ def build_readme() -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--runtime-only",
+        action="store_true",
+        help="Rigenera soltanto i due notebook collegati ai modelli della web app.",
+    )
+    args = parser.parse_args()
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    notebooks = {
+    runtime_notebooks = {
         "01_condition_state_mlp.ipynb": build_condition_notebook(),
         "02_wardrobe_gap_mlp.ipynb": build_gap_notebook(),
+    }
+    academic_notebooks = {
         "03_ghost_risk_logistic_regression.ipynb": build_ghost_notebook(),
         "04_wear_forecast_random_forest.ipynb": build_forecast_notebook(),
         "05_style_clustering_kmeans.ipynb": build_clustering_notebook(),
     }
+    notebooks = runtime_notebooks if args.runtime_only else runtime_notebooks | academic_notebooks
     for filename, nb in notebooks.items():
         path = OUT_DIR / filename
-        nbf.write(nb, path)
+        # Keep notebook diffs stable across Windows, macOS and Linux.
+        path.write_text(nbf.writes(nb), encoding="utf-8", newline="\n")
         print(f"Scritto {path.relative_to(ROOT)}")
     (OUT_DIR / "README.md").write_text(build_readme(), encoding="utf-8")
     print(f"Scritto {(OUT_DIR / 'README.md').relative_to(ROOT)}")
