@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import BrandWordmark from './components/BrandWordmark'
+import HeroBrandIntro from './components/HeroBrandIntro'
 import Icon, { type IconName } from './components/Icon'
 import Logo from './components/Logo'
 
@@ -26,6 +27,9 @@ function navClass({ isActive }: { isActive: boolean }) {
 export default function App() {
   const location = useLocation()
   const mainRef = useRef<HTMLElement | null>(null)
+  // App resta montata durante la navigazione React Router: in questo modo
+  // l'intro parte al caricamento diretto della home, non a ogni ritorno interno.
+  const [showHeroIntro, setShowHeroIntro] = useState(location.pathname === '/')
 
   useEffect(() => {
     const section = location.pathname.startsWith('/items/')
@@ -38,6 +42,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Vai al contenuto</a>
+      {showHeroIntro && <HeroBrandIntro onComplete={() => setShowHeroIntro(false)} />}
 
       <aside className="sidebar" aria-label="Navigazione principale">
         <Link to="/" className="brand" aria-label="ClosetAI — guardaroba">

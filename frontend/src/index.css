@@ -103,6 +103,53 @@ code {
 
 /* Shell */
 .app-shell { min-width: 0; min-height: 100vh; overflow-x: clip; }
+.hero-brand-intro {
+  --intro-logo-left: calc(50% - 56px);
+  --intro-logo-top: calc(50% - 128px);
+  --intro-wordmark-left: calc(50% - 150px);
+  --intro-wordmark-top: calc(50% - 12px);
+  --intro-wordmark-width: 300px;
+  --intro-wordmark-height: 140px;
+  --intro-wordmark-shift: -21.8px;
+  --final-logo-left: 18px;
+  --final-logo-top: 31px;
+  --final-logo-scale: .375;
+  --final-wordmark-left: 70px;
+  --final-wordmark-top: 24px;
+  --final-wordmark-scale: .4;
+  position: fixed; inset: 0; z-index: 500;
+  overflow: hidden; pointer-events: auto;
+  background: radial-gradient(circle at 50% 43%, #fff 0, var(--canvas) 46%, #edf2e9 100%);
+  animation: hero-intro-curtain 2.3s .25s cubic-bezier(.22, 1, .36, 1) both;
+}
+.hero-intro-logo, .hero-intro-wordmark {
+  position: absolute; display: block; transform-origin: top left;
+  will-change: left, top, transform;
+}
+.hero-intro-logo {
+  left: var(--intro-logo-left); top: var(--intro-logo-top);
+  animation: hero-logo-flight 2.3s .25s cubic-bezier(.22, 1, .36, 1) both;
+}
+.hero-intro-wordmark {
+  left: var(--intro-wordmark-left); top: var(--intro-wordmark-top);
+  animation: hero-wordmark-flight 2.3s .25s cubic-bezier(.22, 1, .36, 1) both;
+}
+.hero-intro-wordmark .brand-wordmark {
+  width: var(--intro-wordmark-width); height: var(--intro-wordmark-height);
+}
+.hero-intro-wordmark .brand-wordmark img { transform: translateY(var(--intro-wordmark-shift)); }
+@keyframes hero-logo-flight {
+  0%, 24% { left: var(--intro-logo-left); top: var(--intro-logo-top); transform: scale(1); }
+  78%, 100% { left: var(--final-logo-left); top: var(--final-logo-top); transform: scale(var(--final-logo-scale)); }
+}
+@keyframes hero-wordmark-flight {
+  0%, 24% { left: var(--intro-wordmark-left); top: var(--intro-wordmark-top); transform: scale(1); }
+  78%, 100% { left: var(--final-wordmark-left); top: var(--final-wordmark-top); transform: scale(var(--final-wordmark-scale)); }
+}
+@keyframes hero-intro-curtain {
+  0%, 76% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .sidebar {
   position: fixed; inset: 0 auto 0 0; z-index: 80;
   width: var(--sidebar-w); padding: 24px 18px 20px;
@@ -496,6 +543,20 @@ button .loading-orbit { width: 15px; height: 15px; border-color: rgba(255,255,25
 }
 
 @media (max-width: 960px) {
+  .hero-brand-intro {
+    --intro-logo-top: calc(50% - 112px);
+    --intro-wordmark-left: calc(50% - 115px);
+    --intro-wordmark-top: calc(50% + 4px);
+    --intro-wordmark-width: 230px;
+    --intro-wordmark-height: 108px;
+    --intro-wordmark-shift: -16.7px;
+    --final-logo-left: 18px;
+    --final-logo-top: 16px;
+    --final-logo-scale: .303571;
+    --final-wordmark-left: 60px;
+    --final-wordmark-top: 11.5px;
+    --final-wordmark-scale: .4;
+  }
   .sidebar { display: none; }
   .mobile-header { width: 100vw; height: 66px; position: sticky; top: 0; z-index: 80; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(250,251,248,.92); backdrop-filter: blur(16px); padding: 0 18px; }
   .mobile-header .brand { gap: 8px; }
@@ -538,6 +599,7 @@ button .loading-orbit { width: 15px; height: 15px; border-color: rgba(255,255,25
 }
 
 @media (max-width: 440px) {
+  .hero-brand-intro { --final-logo-left: 13px; --final-wordmark-left: 55px; }
   .app { padding-inline: 13px; }
   .mobile-header { padding-inline: 13px; }
   .home-hero-copy { padding: 28px 22px; }
@@ -567,4 +629,6 @@ button .loading-orbit { width: 15px; height: 15px; border-color: rgba(255,255,25
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .hero-brand-intro { animation-name: hero-intro-curtain; animation-delay: .35s; }
+  .hero-intro-logo, .hero-intro-wordmark { animation: none !important; }
 }
