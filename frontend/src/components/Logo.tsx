@@ -23,9 +23,6 @@ export default function Logo({ size = 34 }: { size?: number }) {
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          // The supplied Illustrator artboard has generous whitespace and the
-          // artwork sits slightly above its centre: crop it optically in CSS.
-          transform: 'translateY(13%) scale(1.9)',
         }}
       />
     </span>

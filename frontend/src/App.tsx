@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
+import BrandWordmark from './components/BrandWordmark'
 import Icon, { type IconName } from './components/Icon'
 import Logo from './components/Logo'
 
@@ -40,11 +41,8 @@ export default function App() {
 
       <aside className="sidebar" aria-label="Navigazione principale">
         <Link to="/" className="brand" aria-label="ClosetAI — guardaroba">
-          <Logo size={38} />
-          <span className="brand-copy">
-            <span className="brand-name">ClosetAI</span>
-            <span className="brand-tagline">Wear more. Waste less.</span>
-          </span>
+          <Logo size={42} />
+          <BrandWordmark />
         </Link>
 
         <nav className="sidebar-nav">
@@ -66,9 +64,10 @@ export default function App() {
           ))}
         </nav>
 
-        <Link to="/items/new" className="button button-primary sidebar-add">
-          <Icon name="plus" size={18} />
-          Aggiungi un capo
+        <Link to="/items/new" className="nav-link sidebar-add">
+          <span className="nav-icon"><Icon name="plus" size={20} /></span>
+          <span><strong>Aggiungi un capo</strong><small>Foto o inserimento</small></span>
+          <Icon name="chevron-right" size={16} className="nav-chevron" />
         </Link>
 
         <nav className="sidebar-nav sidebar-nav-secondary" aria-label="Approfondimenti">
@@ -89,7 +88,7 @@ export default function App() {
       <header className="mobile-header">
         <Link to="/" className="brand" aria-label="ClosetAI — guardaroba">
           <Logo size={34} />
-          <span className="brand-name">ClosetAI</span>
+          <BrandWordmark />
         </Link>
         <Link to="/items/new" className="icon-button" aria-label="Aggiungi un capo">
           <Icon name="plus" size={20} />
