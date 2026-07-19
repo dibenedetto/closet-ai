@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.config import CORS_ORIGINS
+from app.config import CORS_ORIGINS, DEMO_SEED_ENABLED
 from app.db import init_db
 from app.routers import ai, circular, health, items, ml_lab, outfits, stats, wear
 
@@ -26,6 +26,10 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    if DEMO_SEED_ENABLED:
+        from app.services.demo_seed import seed_demo_if_empty
+
+        seed_demo_if_empty()
     yield
 
 

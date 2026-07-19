@@ -33,6 +33,8 @@ os.environ["CLOSETAI_CLASSIFIER"] = "mock"
 os.environ["CLOSETAI_CONDITION_WEIGHTS"] = str(_TEST_ROOT / "no_condition_weights.pt")
 # Idem per la gap analysis: pesi inesistenti → fallback alle regole (deterministico).
 os.environ["CLOSETAI_GAP_WEIGHTS"] = str(_TEST_ROOT / "no_gap_weights.pt")
+# I test che verificano un guardaroba vuoto non devono ricevere il seed demo.
+os.environ["CLOSETAI_DEMO_SEED"] = "0"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

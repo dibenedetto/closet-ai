@@ -64,6 +64,15 @@ ALLOWED_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
     {".jpg", ".jpeg", ".png", ".webp"}
 )
 
+# Su un database nuovo carichiamo il guardaroba dimostrativo versionato.
+# Impostare CLOSETAI_DEMO_SEED=0 per partire intenzionalmente da zero.
+DEMO_SEED_ENABLED: bool = os.environ.get("CLOSETAI_DEMO_SEED", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+
 
 def ensure_dirs() -> None:
     """Crea le directory necessarie per lo storage locale."""

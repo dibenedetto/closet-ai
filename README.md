@@ -81,6 +81,25 @@ A backend attivo:
 Il frontend di sviluppo gira su http://localhost:5173 (default Vite); le chiamate `/api/...`
 vengono proxy-ate al backend, quindi non servono configurazioni CORS lato sviluppatore.
 
+### Guardaroba dimostrativo
+
+Su un database nuovo il backend carica automaticamente un guardaroba versionato
+con 12 capi provenienti da Fashion-MNIST e Defect-Clothes. Include utilizzi,
+stati diversi, due capi fantasma, una riparazione, una donazione e segnali utili
+per la gap analysis. Un guardaroba già esistente non viene mai sovrascritto.
+
+Per sostituire esplicitamente i dati locali con la demo:
+
+```bash
+cd backend
+uv run python scripts/seed_demo.py --reset
+```
+
+Per avviare l'app intenzionalmente vuota, impostare `CLOSETAI_DEMO_SEED=0`.
+Il database `data/closetai.db` e `data/items/` restano esclusi da Git: la demo
+persistente è ricostruita da `backend/demo_assets/wardrobe.json` e dalle
+immagini versionate in `backend/demo_assets/items/`.
+
 ## Screenshot
 
 > Screenshot live della UI in `docs/screenshots/` — vedere

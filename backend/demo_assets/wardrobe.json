@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "profile": {
+    "name": "balanced-demo",
+    "source": "ml/datasets/wardrobe/wardrobe_dataset.csv",
+    "purpose": "Guardaroba compatto ma completo, con stati, capi fantasma, gap e impatto verde visibili durante la demo."
+  },
+  "items": [
+    {
+      "slug": "tshirt-rossa",
+      "name": "T-shirt bordeaux",
+      "category": "t-shirt",
+      "color": "rosso",
+      "image": "tshirt-rossa.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 19.9,
+      "owned_days": 280,
+      "wear_count": 30,
+      "wear_window_days": 90,
+      "description": "Una t-shirt versatile e molto utilizzata: il costo per utilizzo scende rapidamente."
+    },
+    {
+      "slug": "camicia-bianca",
+      "name": "Camicia bianca classica",
+      "category": "camicia",
+      "color": "bianco",
+      "image": "camicia-bianca.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 49.0,
+      "owned_days": 720,
+      "wear_count": 12,
+      "wear_window_days": 120,
+      "description": "Un capo formale neutro, utile per mostrare la composizione degli outfit."
+    },
+    {
+      "slug": "maglione-verde",
+      "name": "Maglione verde foresta",
+      "category": "maglione",
+      "color": "verde",
+      "image": "maglione-verde.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "usurato",
+      "price": 79.0,
+      "owned_days": 410,
+      "wear_count": 8,
+      "wear_window_days": 150,
+      "description": "Un capo invernale usurato ma ancora utile, già sottoposto a una piccola riparazione."
+    },
+    {
+      "slug": "jeans-blu",
+      "name": "Jeans blu indaco",
+      "category": "jeans",
+      "color": "blu",
+      "image": "jeans-blu.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 89.0,
+      "owned_days": 600,
+      "wear_count": 25,
+      "wear_window_days": 100,
+      "description": "Uno dei capi più indossati del guardaroba dimostrativo."
+    },
+    {
+      "slug": "chino-beige",
+      "name": "Pantaloni chino beige",
+      "category": "pantaloni",
+      "color": "beige",
+      "image": "chino-beige.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 59.0,
+      "owned_days": 350,
+      "wear_count": 18,
+      "wear_window_days": 90,
+      "description": "Un fondo neutro che aumenta la compatibilità cromatica degli outfit."
+    },
+    {
+      "slug": "sneakers-bianche",
+      "name": "Sneakers bianche",
+      "category": "scarpe",
+      "color": "bianco",
+      "image": "sneakers-bianche.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "usurato",
+      "price": 99.0,
+      "owned_days": 200,
+      "wear_count": 28,
+      "wear_window_days": 75,
+      "description": "Scarpe ad alta frequenza d'uso: mostrano bene usura e costo per utilizzo."
+    },
+    {
+      "slug": "giacca-azzurra",
+      "name": "Giacca azzurra",
+      "category": "giacca",
+      "color": "azzurro",
+      "image": "giacca-azzurra.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 119.0,
+      "owned_days": 800,
+      "wear_count": 4,
+      "wear_window_days": 180,
+      "description": "Il capospalla attivo del guardaroba, usato poco ma ancora in buono stato."
+    },
+    {
+      "slug": "vestito-rosa",
+      "name": "Vestito rosa estivo",
+      "category": "vestito",
+      "color": "rosa",
+      "image": "vestito-rosa.png",
+      "source_dataset": "FashionMNIST",
+      "condition": "buono",
+      "price": 89.0,
+      "owned_days": 95,
+      "wear_count": 0,
+      "wear_window_days": 90,
+      "description": "Mai indossato da oltre trenta giorni: è un capo fantasma esplicito per la demo."
+    },
+    {
+      "slug": "blazer-argento",
+      "name": "Blazer argento",
+      "category": "giacca",
+      "color": "grigio",
+      "image": "blazer-argento.jpg",
+      "source_dataset": "Defect-Clothes v3 COCO",
+      "condition": "buono",
+      "price": 129.0,
+      "owned_days": 540,
+      "wear_count": 6,
+      "wear_window_days": 180,
+      "description": "Un capo formale passato in seconda vita tramite donazione."
+    },
+    {
+      "slug": "vestito-blu",
+      "name": "Vestito blu elegante",
+      "category": "vestito",
+      "color": "blu",
+      "image": "vestito-blu.jpg",
+      "source_dataset": "Defect-Clothes v3 COCO",
+      "condition": "buono",
+      "price": 110.0,
+      "owned_days": 180,
+      "wear_count": 0,
+      "wear_window_days": 90,
+      "description": "Secondo capo fantasma: consente di spiegare che il sistema osserva l'uso, non il valore estetico."
+    },
+    {
+      "slug": "tshirt-sabbia",
+      "name": "T-shirt color sabbia",
+      "category": "t-shirt",
+      "color": "beige",
+      "image": "tshirt-sabbia.jpg",
+      "source_dataset": "Defect-Clothes v3 COCO",
+      "condition": "buono",
+      "price": 24.0,
+      "owned_days": 90,
+      "wear_count": 15,
+      "wear_window_days": 70,
+      "description": "Una fotografia del dataset COCO usata come capo quotidiano del guardaroba."
+    },
+    {
+      "slug": "camicia-strappata",
+      "name": "Camicia azzurra strappata",
+      "category": "camicia",
+      "color": "azzurro",
+      "image": "camicia-strappata.jpg",
+      "source_dataset": "Defect-Clothes v3 COCO",
+      "condition": "danneggiato",
+      "price": 55.0,
+      "owned_days": 365,
+      "wear_count": 1,
+      "wear_window_days": 120,
+      "description": "Foto con un difetto reale annotato: rende immediata la spiegazione della diagnosi dello stato."
+    }
+  ],
+  "actions": [
+    {
+      "item_slug": "maglione-verde",
+      "action_type": "riparazione",
+      "notes": "Cucitura del polsino rinforzata: il capo resta nel guardaroba."
+    },
+    {
+      "item_slug": "blazer-argento",
+      "action_type": "donazione",
+      "notes": "Donato a un centro di raccolta locale: seconda vita registrata."
+    }
+  ]
+}
